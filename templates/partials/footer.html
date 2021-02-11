@@ -1,0 +1,9 @@
+<footer class="footer">
+    <div class="container">
+        <div class="has-text-centered">
+            <p>Health Report 0.0.1</p>
+            <p class="has-text-grey is-size-7">Page generated on {{ now.strftime('%Y-%m-%d %H:%M UTC') }}. {% if duration: %} Data collection took {{ duration|round(1) }}s. {% endif %}</p>
+        </div>
+    </div>
+</footer>
+<script>anchors.add('h2.title'); </script>

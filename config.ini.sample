@@ -1,0 +1,10 @@
+[kubernetes]
+node = 192.168.0.100
+api_host = 192.168.0.101
+token = xxxxxx
+
+
+[hadoop]
+
+
+

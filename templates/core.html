@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Metrics{% endblock %}
+{% block content %}
+ <div>
+  <h2>core</h2>
+ </div>
+
+<div>
+ <table border="1">
+   <tr>
+    <th>component</th>
+    <th>status</th>
+   </tr>
+   {% for i  in core['result'] %}
+      <tr>
+       <th>{{i['name']}}</th>
+       <th>{{ i['status']}}</th>
+      </tr>
+  {% endfor %}
+ </table>
+</div>
+
+
+
+{% endblock %}
