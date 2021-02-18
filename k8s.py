@@ -162,7 +162,10 @@ class K8sClient:
             pod['name'] = i.metadata.name
             pod['ns'] = i.metadata.namespace
             pod['status'] = i.status.phase
-            pod['restart'] = max([x.restart_count for x in i.status.container_statuses])
+            if i.status.container_statuses is not None:
+                pod['restart'] = max([x.restart_count for x in i.status.container_statuses])
+            else:
+                pod['restart'] = None
             pod['start_time'] = i.status.start_time
             pod['ip'] = i.status.pod_ip
             pod['host'] = i.status.host_ip
