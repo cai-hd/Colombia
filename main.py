@@ -18,5 +18,6 @@ def generate_report():
         out.render_template(context, i)
 
 
+
 if __name__ == "__main__":
     generate_report()
