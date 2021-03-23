@@ -7,14 +7,16 @@ from log import logger
 class RemoteClient:
     """Client to interact with a remote host via SSH """
 
-    def __init__(self, host, user="root", ssh_key_filepath="/root/.ssh/id_rsa.pub",ssh_port=22 ):
+    def __init__(self, host, user="root", ssh_key_filepath="/root/.ssh/id_rsa",ssh_port=22 ):
         self.host = host
         self.user = user
         self.ssh_key_filepath = ssh_key_filepath
         self.ssh_port=ssh_port
         self.client = None
         self.conn = None
-
+        self.t=Transport((self.host,self.ssh_port))
+        self.sftp=SFTPClient.from_transport(self.t)
+        self.keyfile=self.__get_ssh_key()
     @logger.catch
     def __get_ssh_key(self):
         """ Fetch locally stored SSH key."""
@@ -80,11 +82,8 @@ class RemoteClient:
 
     @logger.catch
     def sftp_put_file(self,local_path,dest_path):
-        t=Transport((self.host,self.ssh_port))
-        self.keyfile=self.__get_ssh_key()
-        t.connect(username=self.user,pkey=self.keyfile)
-        sftp = SFTPClient.from_transport(t)
-        sftp.put(local_path,dest_path)
+        self.t.connect(username=self.user,pkey=self.keyfile)
+        self.sftp.put(local_path,dest_path)
 
 
 
