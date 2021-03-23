@@ -81,7 +81,8 @@ class RemoteClient:
     @logger.catch
     def sftp_put_file(self,local_path,dest_path):
         t=Transport((self.host,self.ssh_port))
-        t.connect(username=self.user,pkey=self.ssh_key)
+        self.keyfile=self.__get_ssh_key()
+        t.connect(username=self.user,pkey=self.keyfile)
         sftp = SFTPClient.from_transport(t)
         sftp.put(local_path,dest_path)
 
