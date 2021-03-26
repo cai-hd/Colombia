@@ -49,8 +49,8 @@ return {"desc": "component", "result": component_list}
 #         return {"desc": "docker", "result": [i for i in result]}
 
 def upload(ip:str,localpath:str,destpath:str):
-    r = RemoteClient(host=ip)
-    r.sftp_put_file(localpath,destpath)
+    re = RemoteClient(host=ip)
+    re.sftp_put_file(localpath,destpath)
 
 
 def put_script(nodes):
@@ -61,10 +61,10 @@ def put_script(nodes):
     p.join
 
 def run_ssh(ip):
-    r = RemoteClient(host=ip)
-    c = r.connect()
+    re = RemoteClient(host=ip)
+    c = re.connect()
     channel = c.invoke_shell()
-    channel.settimeout(5)
+    #channel.settimeout(5)
     channel.send("bash /tmp/check_node-v1.sh  \n")
     buff = ''
     sleep(5)
@@ -72,7 +72,7 @@ def run_ssh(ip):
         sleep(0.5)
         recv = channel.recv(4096)
         buff += recv.decode("utf-8")
-    r.disconnect()
+    re.disconnect()
     return (ip,buff.splitlines())
 
 def run_callback(msg):

@@ -8,7 +8,6 @@
 """
 
 
-import  json
 from connection import RemoteClient
 from collections import defaultdict
 import re
@@ -347,7 +346,7 @@ class nodecheck(RemoteClient):
     def get_kubeproxy(self):
         pass
 
-n=nodecheck(host="120.221.92.19",ssh_key_filepath="./secret/id_rsa")
+n=nodecheck(host="120.221.92.23",ssh_key_filepath="./secret/id_rsa")
 # n.execute_commands(r'''host www.baidfffu.com''')
 c=n.get_dns()
 print(c)
