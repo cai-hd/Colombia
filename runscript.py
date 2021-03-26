@@ -30,8 +30,8 @@ def run_ssh(ip:str,dst_script:str) ->():
     return (ip,result)
 
 def run_callback(msg:()) ->None:
-    q=Queue()
     global q
+    q = Queue()
     ip,result = msg
     r = defaultdict(list)
     for i in result:

@@ -385,5 +385,5 @@ check_pid
 check_z_process
 check_ntp
 #check_msg_logs
-echo "EXEC_FIN"
+#echo "EXEC_FIN"
 exit 0
