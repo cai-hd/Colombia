@@ -82,7 +82,7 @@ fi
 	#输出磁盘使用率
 check_diskUsage(){
 #duResult=$(df -ht xfs|grep -v Filesystem|awk '{gsub("%", "", $(NF-1));print $0}'|awk -v usage=$maxDUpercentage '$(NF-1)>usage {print $0}')
-duResult=$(timeout 5s df -h|grep -v -E "token|secret|overlay2|containers|Filesystem")
+duResult=$(timeout 5s df -h|grep -v -E "token|secret|overlay2|containers|tmpfs|kubernetes.io|Filesystem")
 if [[ ! -z $duResult ]];then
   echo '{"alert_status":"info","check_point":"diskUsage","check_data":"'$duResult'"}'
 else
@@ -117,7 +117,7 @@ for d in $DISKS
 	#输出网卡情况,网卡不是eth开头时修改正则匹配
 check_nic(){
 #NETDEV=$(ifconfig  -a |grep  -E  -o "^eth[0-9]*|^bond[0-9]*|^ens[0-9]*")
-NETDEV=$(ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*"|sort -u)
+NETDEV=$(ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*"|sort -u)
 sar -n DEV 1  $maxCheckTime 1>$healthLogDir/netStatus-$currentDay.log
 for n in $NETDEV
   do
@@ -385,4 +385,5 @@ check_pid
 check_z_process
 check_ntp
 #check_msg_logs
+echo "EXEC_FIN"
 exit 0

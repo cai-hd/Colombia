@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+#-*- coding: utf-8 -*-
+
 import json
 from connection import RemoteClient
 from multiprocessing import Pool,Queue
@@ -45,31 +48,35 @@ return {"desc": "component", "result": component_list}
 #         result = self.session.execute_commands(cmd)
 #         return {"desc": "docker", "result": [i for i in result]}
 
+def upload(ip:str,localpath:str,destpath:str):
+    r = RemoteClient(host=ip)
+    r.sftp_put_file(localpath,destpath)
+
 
 def put_script(nodes):
-    p=Pool()
+    p=Pool(processes=8)
     for i in nodes:
-        r=RemoteClient(host=i)
-        p.apply_async(r.sftp_put_file,args=("./scripts/check_node-v1.sh","/tmp/"))
+        p.apply_async(upload,args=(i,"./scripts/check_node-v1.sh","/tmp/check_node-v1.sh"))
     p.close()
-    p.join()
-
+    p.join
 
 def run_ssh(ip):
     r = RemoteClient(host=ip)
     c = r.connect()
     channel = c.invoke_shell()
+    channel.settimeout(5)
     channel.send("bash /tmp/check_node-v1.sh  \n")
     buff = ''
-    sleep(2)
-    while not str(buff).endswith(('# ', '$ ')):
-        recv = channel.recv(1024)
+    sleep(5)
+    while  str(buff).find("EXEC_FIN") == -1:
+        sleep(0.5)
+        recv = channel.recv(4096)
         buff += recv.decode("utf-8")
     r.disconnect()
     return (ip,buff.splitlines())
 
 def run_callback(msg):
-    ip,result=msg
+    ip,result = msg
     r = defaultdict(list)
     for i in result:
         try:
@@ -102,7 +109,7 @@ def get_result():
     return {"desc":"nodecheck","result":check_result}
 
 def run_check(nodes):
-    p = Pool()
+    p = Pool(processes=8)
     for i in nodes:
         p.apply_async(func=run_ssh,args=(i,),callback=run_callback)
     p.close()

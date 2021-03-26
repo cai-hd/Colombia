@@ -14,9 +14,7 @@ class RemoteClient:
         self.ssh_port=ssh_port
         self.client = None
         self.conn = None
-        self.t=Transport((self.host,self.ssh_port))
-        self.sftp=SFTPClient.from_transport(self.t)
-        self.keyfile=self.__get_ssh_key()
+
     @logger.catch
     def __get_ssh_key(self):
         """ Fetch locally stored SSH key."""
@@ -79,10 +77,13 @@ class RemoteClient:
         else:
             error_msg = stderr.read().decode()
             logger.error("command {} failed  | {}".format(commands, error_msg))
-
+            return error_msg
     @logger.catch
     def sftp_put_file(self,local_path,dest_path):
-        self.t.connect(username=self.user,pkey=self.keyfile)
+        self.t=Transport(sock=(self.host,self.ssh_port))
+        self.keyfile = self.__get_ssh_key()
+        self.t.connect(username=self.user, pkey=self.keyfile)
+        self.sftp=SFTPClient.from_transport(self.t)
         self.sftp.put(local_path,dest_path)
 
 
