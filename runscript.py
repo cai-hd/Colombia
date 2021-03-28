@@ -12,7 +12,7 @@ from connection import RemoteClient
 from multiprocessing import Pool, Queue
 from collections import defaultdict
 
-
+q = Queue()
 def upload(ip: str, localpath: str, destpath: str) -> None:
     remote = RemoteClient(host=ip)
     remote.sftp_put_file(localpath, destpath)
@@ -34,8 +34,6 @@ def run_ssh(ip: str, dst_script: str) -> ():
 
 
 def run_callback(msg: ()) -> None:
-    global q
-    q = Queue()
     ip, result = msg
     r = defaultdict(list)
     for i in result:

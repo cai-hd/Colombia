@@ -11,7 +11,7 @@ from multiprocessing import Pool,Queue
 from connection import RemoteClient
 from collections import defaultdict
 import re
-
+q=Queue()
 
 def strstrip(a: str) -> str:
     return a.replace('\n', '').replace('\r', '')
@@ -134,7 +134,7 @@ class nodecheck(RemoteClient):
         cmd = r'''ls -ld  /proc/[0-9]* |wc -l;cat /proc/sys/kernel/pid_max'''
         response = self.execute_commands(cmd)
         pid["pid"]["pid_max"] = strstrip(response[1])
-        pid["pid"]["contrack_used"] = strstrip(response[0])
+        pid["pid"]["pid_used"] = strstrip(response[0])
         pid["pid"]["pid_percentage"] = float("%0.4f" % (
             int(strstrip(response[0])) / int(strstrip(response[1]))))
         return pid
@@ -461,8 +461,6 @@ def checknode(ip: str, key_filepath='/root/.ssh/id_rsa',**kwargs):
     return {ip: c}
 
 def callback(msg):
-    global q
-    q=Queue()
     q.put(msg)
 
 def get_result():
