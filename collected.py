@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import json
 from connection import RemoteClient
-from multiprocessing import Pool,Queue
+from multiprocessing import Pool, Queue
 from time import sleep
 from collections import defaultdict
 
-nodes=["119.167.202.131","120.221.92.19"]
-q=Queue()
+nodes = ["119.167.202.131", "120.221.92.19"]
+q = Queue()
 
 """
 component_list = []
 return {"desc": "component", "result": component_list}
- 
+
  {
  "desc":"node_health",
  "result":
@@ -21,7 +21,7 @@ return {"desc": "component", "result": component_list}
      "check_docker":"",
      "check_uptime":"{"check_status":"info","check_data":"1,2,3"}",
      "check_disusage":"",
-     "check_diskIO":"{"result":"","check_data":"","commandExStatus":""}"  
+     "check_diskIO":"{"result":"","check_data":"","commandExStatus":""}"
      "check_Net":""
        }
      },
@@ -48,41 +48,49 @@ return {"desc": "component", "result": component_list}
 #         result = self.session.execute_commands(cmd)
 #         return {"desc": "docker", "result": [i for i in result]}
 
-def upload(ip:str,localpath:str,destpath:str):
+def upload(ip: str, localpath: str, destpath: str):
     re = RemoteClient(host=ip)
-    re.sftp_put_file(localpath,destpath)
+    re.sftp_put_file(localpath, destpath)
 
 
 def put_script(nodes):
-    p=Pool(processes=8)
+    p = Pool(processes=8)
     for i in nodes:
-        p.apply_async(upload,args=(i,"./scripts/check_node-v1.sh","/tmp/check_node-v1.sh"))
+        p.apply_async(
+            upload,
+            args=(
+                i,
+                "./scripts/check_node-v1.sh",
+                "/tmp/check_node-v1.sh"))
     p.close()
     p.join
+
 
 def run_ssh(ip):
     re = RemoteClient(host=ip)
     c = re.connect()
     channel = c.invoke_shell()
-    #channel.settimeout(5)
+    # channel.settimeout(5)
     channel.send("bash /tmp/check_node-v1.sh  \n")
     buff = ''
     sleep(5)
-    while  str(buff).find("EXEC_FIN") == -1:
+    while str(buff).find("EXEC_FIN") == -1:
         sleep(0.5)
         recv = channel.recv(4096)
         buff += recv.decode("utf-8")
     re.disconnect()
-    return (ip,buff.splitlines())
+    return (ip, buff.splitlines())
+
 
 def run_callback(msg):
-    ip,result = msg
+    ip, result = msg
     r = defaultdict(list)
     for i in result:
         try:
-            b=json.loads(i)
+            b = json.loads(i)
             c = b['check_point']
-            r[c].append({"alert_status": b['alert_status'], "check_data": b['check_data']})
+            r[c].append({"alert_status": b['alert_status'],
+                        "check_data": b['check_data']})
         except json.JSONDecodeError as e:
             continue
     j = r['diskUsage'][0]['check_data'].split()
@@ -98,20 +106,21 @@ def run_callback(msg):
         d['Mounted'] = i[5]
         l.append(d)
     r['diskUsage'][0]['check_data'] = l
-    q.put({ip:r})
+    q.put({ip: r})
 
 
 def get_result():
-    check_result=[]
+    check_result = []
     while not q.empty():
-        i=q.get()
+        i = q.get()
         check_result.append(i)
-    return {"desc":"nodecheck","result":check_result}
+    return {"desc": "nodecheck", "result": check_result}
+
 
 def run_check(nodes):
     p = Pool(processes=8)
     for i in nodes:
-        p.apply_async(func=run_ssh,args=(i,),callback=run_callback)
+        p.apply_async(func=run_ssh, args=(i,), callback=run_callback)
     p.close()
     p.join()
 
@@ -119,6 +128,5 @@ def run_check(nodes):
 def run(nodes):
     put_script(nodes)
     run_check(nodes)
-    c=get_result()
+    c = get_result()
     return c
-
