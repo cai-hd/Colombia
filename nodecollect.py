@@ -7,11 +7,12 @@
 @software: PyCharm
 """
 
-from multiprocessing import Pool,Queue
+from multiprocessing import Pool, Queue
 from connection import RemoteClient
 from collections import defaultdict
 import re
-q=Queue()
+q = Queue()
+
 
 def strstrip(a: str) -> str:
     return a.replace('\n', '').replace('\r', '')
@@ -437,9 +438,9 @@ class nodecheck(RemoteClient):
         return kubeproxy
 
 
-def checknode(ip: str, key_filepath='/root/.ssh/id_rsa',**kwargs):
+def checknode(ip: str, key_filepath='/root/.ssh/id_rsa', **kwargs):
     c = {}
-    n = nodecheck(host=ip, ssh_key_filepath=key_filepath,**kwargs)
+    n = nodecheck(host=ip, ssh_key_filepath=key_filepath, **kwargs)
     for i in [
         "docker",
         "load",
@@ -454,14 +455,16 @@ def checknode(ip: str, key_filepath='/root/.ssh/id_rsa',**kwargs):
         "ntp",
         "containerd",
         "kubelet",
-        "kubeproxy"]:
+            "kubeproxy"]:
         m = getattr(n, "get_{}".format(i))
         r = m()
         c.update(r)
     return {ip: c}
 
+
 def callback(msg):
     q.put(msg)
+
 
 def get_result():
     check_result = []
@@ -471,20 +474,27 @@ def get_result():
     return {"result": check_result}
 
 
-def checkAllNodes(nodes:[]):
+def checkAllNodes(nodes: []):
     p = Pool(processes=8)
     for i in nodes:
-        p.apply_async(func=checknode,args=(i,"./secret/id_rsa"),callback=callback)
+        p.apply_async(
+            func=checknode,
+            args=(
+                i,
+                "./secret/id_rsa"),
+            callback=callback)
     p.close()
     p.join()
 
-def run(nodes:[]):
-    checkAllNodes(nodes)
-    results=get_result()
-    return  results
 
-if __name__=='__main__':
-    rr=run(["120.221.92.23"])
+def run(nodes: []):
+    checkAllNodes(nodes)
+    results = get_result()
+    return results
+
+
+if __name__ == '__main__':
+    rr = run(["120.221.92.23"])
     print(rr)
 
 # n=nodecheck(host="120.221.92.23",ssh_key_filepath="./secret/id_rsa")
