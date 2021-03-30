@@ -53,13 +53,13 @@ class nodecheck(RemoteClient):
             docker_status["docker"]["maxDockerFD"] = maxDockerFD
             docker_status["docker"]["usedDockerFD"] = usedDockerFD
             docker_status["docker"]["dockerFDPercentage"] = dockerFDPercentage
-            return docker_status
         else:
             docker_status["docker"]["dockerProcess"] = "inactive"
             docker_status["docker"]["maxDockerFD"] = None
             docker_status["docker"]["usedDockerFD"] = None
             docker_status["docker"]["dockerFDPercentage"] = None
-            return docker_status
+
+        return docker_status
 
     def get_load(self):
         """
@@ -438,7 +438,7 @@ class nodecheck(RemoteClient):
         return kubeproxy
 
 
-def checknode(ip: str, key_filepath='/root/.ssh/id_rsa', **kwargs):
+def checknode(ip: str, key_filepath:str='/root/.ssh/id_rsa', **kwargs):
     c = {}
     n = nodecheck(host=ip, ssh_key_filepath=key_filepath, **kwargs)
     for i in [
