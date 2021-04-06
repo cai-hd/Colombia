@@ -13,12 +13,14 @@ from multiprocessing import Pool, Queue
 from collections import defaultdict
 
 q = Queue()
+
+
 def upload(ip: str, localpath: str, destpath: str) -> None:
     remote = RemoteClient(host=ip)
     remote.sftp_put_file(localpath, destpath)
 
 
-def put_script(nodes: [], src_script: str, dst_script: str) -> None:
+def put_script(nodes: list, src_script: str, dst_script: str) -> None:
     p = Pool(processes=8)
     for i in nodes:
         p.apply_async(upload, args=(i, src_script, dst_script))
@@ -30,7 +32,7 @@ def run_ssh(ip: str, dst_script: str) -> ():
     remote = RemoteClient(host=ip)
     cmd = "bash {}".format(dst_script)
     result = remote.execute_commands(cmd)  # result is a return list
-    return (ip, result)
+    return ip, result
 
 
 def run_callback(msg: ()) -> None:
@@ -41,7 +43,7 @@ def run_callback(msg: ()) -> None:
             b = json.loads(i)
             c = b['check_point']
             r[c].append({"alert_status": b['alert_status'],
-                        "check_data": b['check_data']})
+                         "check_data": b['check_data']})
         except json.JSONDecodeError as e:
             continue
     q.put({ip: r})

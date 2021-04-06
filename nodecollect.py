@@ -11,6 +11,7 @@ from multiprocessing import Pool, Queue
 from connection import RemoteClient
 from collections import defaultdict
 import re
+
 q = Queue()
 
 
@@ -137,7 +138,7 @@ class nodecheck(RemoteClient):
         pid["pid"]["pid_max"] = strstrip(response[1])
         pid["pid"]["pid_used"] = strstrip(response[0])
         pid["pid"]["pid_percentage"] = float("%0.4f" % (
-            int(strstrip(response[0])) / int(strstrip(response[1]))))
+                int(strstrip(response[0])) / int(strstrip(response[1]))))
         return pid
 
     def get_dns(self):
@@ -215,15 +216,15 @@ class nodecheck(RemoteClient):
                 if len(i) == 13:
                     if float(
                             i[7]) > 5 or float(
-                            i[8]) > 100 or float(
-                            i[9]) > 100 or float(
-                            i[10]) > 100:
+                        i[8]) > 100 or float(
+                        i[9]) > 100 or float(
+                        i[10]) > 100:
                         l.append(i)
                 else:
                     if float(
                             i[8]) > 100 or float(
-                            i[9]) > 100 or float(
-                            i[10]) > 5:
+                        i[9]) > 100 or float(
+                        i[10]) > 5:
                         l.append(i)
             if len(l) == 0:
                 d1["device"] = k
@@ -313,9 +314,9 @@ class nodecheck(RemoteClient):
                         k = i.split()
                         if float(
                                 k[2]) > 300000 or float(
-                                k[3]) > 300000 or float(
-                                k[4]) > 500000 or float(
-                                k[5]) > 500000:
+                            k[3]) > 300000 or float(
+                            k[4]) > 500000 or float(
+                            k[5]) > 500000:
                             d1["device"] = strstrip(j)
                             d1["check_result"]["isNormal"] = False
                             d1["check_result"]["data"] = i
@@ -438,7 +439,7 @@ class nodecheck(RemoteClient):
         return kubeproxy
 
 
-def checknode(ip: str, key_filepath:str='/root/.ssh/id_rsa', **kwargs):
+def checknode(ip: str, key_filepath: str = '/root/.ssh/id_rsa', **kwargs):
     c = {}
     n = nodecheck(host=ip, ssh_key_filepath=key_filepath, **kwargs)
     for i in [
@@ -455,7 +456,7 @@ def checknode(ip: str, key_filepath:str='/root/.ssh/id_rsa', **kwargs):
         "ntp",
         "containerd",
         "kubelet",
-            "kubeproxy"]:
+        "kubeproxy"]:
         m = getattr(n, "get_{}".format(i))
         r = m()
         c.update(r)
