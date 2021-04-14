@@ -7,7 +7,7 @@ from log import logger
 class RemoteClient:
     """Client to interact with a remote host via SSH """
 
-    def __init__(self, host, user="root", ssh_key_filepath="/root/.ssh/id_rsa",ssh_port=22 ):
+    def __init__(self, host, user="root", ssh_key_filepath="/root/.ssh/id_rsa",ssh_port=22):
         self.host = host
         self.user = user
         self.ssh_key_filepath = ssh_key_filepath

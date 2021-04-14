@@ -8,7 +8,7 @@
 """
 
 from multiprocessing import Pool, Queue
-from connection import RemoteClient
+from utils import RemoteClientCompass, config_obj
 from collections import defaultdict
 import re
 
@@ -19,14 +19,10 @@ def strstrip(a: str) -> str:
     return a.replace('\n', '').replace('\r', '')
 
 
-class nodecheck(RemoteClient):
-    def __init__(
-            self,
-            host,
-            user="root",
-            ssh_key_filepath="/root/.ssh/id_rsa",
-            ssh_port=22):
-        super(nodecheck, self).__init__(host, user, ssh_key_filepath, ssh_port)
+class nodecheck(RemoteClientCompass):
+    def __init__(self, host, user, ssh_port, pwd, ssh_key):
+        super(nodecheck, self).__init__(host, user, ssh_port, pwd, ssh_key)
+        self.execute_commands = self.cmd
 
     def get_docker(self):
         """
@@ -155,9 +151,9 @@ class nodecheck(RemoteClient):
               }
            ]
         }
-
+c
         """
-        dnslist = ["www.baidu.com", "www.xxffffwwx.com"]
+        dnslist = config_obj.get('kubernetes', 'externalDomain').split()
         dns = defaultdict(list)
         for i in dnslist:
             d = {}
@@ -438,6 +434,24 @@ class nodecheck(RemoteClient):
             kubeproxy["kubeproxy"]["porthealth"] = False
         return kubeproxy
 
+    def start_check(self):
+        check_data = dict()
+        check_data.update(self.get_docker())
+        check_data.update(self.get_load())
+        check_data.update(self.get_contrack())
+        check_data.update(self.get_openfile())
+        check_data.update(self.get_pid())
+        check_data.update(self.get_dns())
+        check_data.update(self.get_diskIO())
+        check_data.update(self.get_diskUsage())
+        check_data.update(self.get_nic())
+        check_data.update(self.get_zprocess())
+        check_data.update(self.get_ntp())
+        check_data.update(self.get_containerd())
+        check_data.update(self.get_kubelet())
+        check_data.update(self.get_kubeproxy())
+        return check_data
+
 
 def checknode(ip: str, key_filepath: str = '/root/.ssh/id_rsa', **kwargs):
     c = {}
@@ -494,9 +508,9 @@ def run(nodes: []):
     return results
 
 
-if __name__ == '__main__':
-    rr = run(["120.221.92.23"])
-    print(rr)
+# if __name__ == '__main__':
+#     rr = run(["120.221.92.23"])
+#     print(rr)
 
 # n=nodecheck(host="120.221.92.23",ssh_key_filepath="./secret/id_rsa")
 # # n.execute_commands(r'''host www.baidfffu.com''')
