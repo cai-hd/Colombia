@@ -1,4 +1,12 @@
 import re
+import sys
+
+import requests
+from configparser import ConfigParser
+from requests.auth import HTTPBasicAuth
+import paramiko
+from log import logger
+import docker
 
 ONE_MEBI = 1024 ** 2
 ONE_GIBI = 1024 ** 3
@@ -23,6 +31,10 @@ FACTORS = {
     "Ei": 1024 ** 6,
 }
 
+config_obj = ConfigParser()
+config_obj.read("config.ini")
+base_header = {"X-Tenant": "system-tenant", "Content-Type": "application/json", "Accept": "application/json"}
+
 
 def parse_resource(v):
     if v is None:
@@ -42,3 +54,104 @@ def parse_resource(v):
     match = RESOURCE_PATTERN.match(v)
     factor = FACTORS[match.group(2)]
     return int(match.group(1)) * factor
+
+
+def base_request(method, url, data=None, headers=None):
+    """
+    通用的请求模板
+    :param method: 请求的方法
+    :param url: 请求 的路径
+    :param data: 请求的内容
+    :param headers: 请求的header
+    :return: 返回请求是否成功，并返回请求返回的内容
+    """
+    method = method.lower()
+    user = config_obj.get("kubernetes", "admin_user_name")
+    pwd = config_obj.get("kubernetes", "admin_user_pwd")
+
+    if method == "get":
+        ret = requests.get(url, params=data, auth=HTTPBasicAuth(user, pwd), headers=headers)
+    elif method == "put":
+        ret = requests.put(url, data=data, auth=HTTPBasicAuth(user, pwd), headers=headers)
+    elif method == "post":
+        ret = requests.post(url, data=data, auth=HTTPBasicAuth(user, pwd), headers=headers)
+    elif method == "delete":
+        ret = requests.delete(url, auth=HTTPBasicAuth(user, pwd), headers=headers)
+    else:
+        sys.exit("请求方法错误")
+    if ret.status_code not in [200, 202]:
+        return False, ret.content
+    return True, ret.json()
+
+
+class RemoteClientCompass(object):
+    def __init__(self, host: str, user: str, ssh_port: int = 22, pwd: str = None, ssh_key: str = None):
+        self.host = host
+        self.ssh_port = ssh_port
+        self.user = user
+        self.pwd = pwd
+        self.ssh_key = ssh_key
+        self.__transport = None
+
+    @logger.catch
+    def connect(self):
+        if self.__transport is None:
+            transport = paramiko.Transport((self.host, self.ssh_port))
+            try:
+                if self.ssh_key == "ssh-global":
+                    private_key = paramiko.RSAKey.from_private_key_file('./tmp/private.pem')
+                    transport.connect(username=self.user, pkey=private_key)
+                elif self.pwd:
+                    transport.connect(username=self.user, password=self.pwd)
+                else:
+                    logger.error(f'{self.host} has no auth')
+                    raise
+                logger.info(f"login to {self.host}")
+
+            except paramiko.AuthenticationException as ssh_err:
+                logger.error(f"connect to {self.host}, get some err: {ssh_err}")
+                raise ssh_err
+            self.__transport = transport
+
+    @logger.catch
+    def cmd(self, commands):
+        self.connect()
+        ssh = paramiko.SSHClient()
+        ssh._transport = self.__transport
+        stdin, stdout, stderr = ssh.exec_command(commands)
+        status = stdout.channel.recv_exit_status()
+        if status == 0:
+            response = stdout.readlines()
+            for line in response:
+                logger.info(f'INPUT: {commands} | OUTPUT: {line}')
+            return response
+        else:
+            error_msg = stderr.read().decode()
+            logger.error("command {} failed  | {}".format(commands, error_msg))
+            return error_msg
+
+    @logger.catch
+    def sftp_put(self, src, des):
+        sftp = paramiko.SFTPClient.from_transport(self.__transport)
+        sftp.put(src, des)
+
+    @logger.catch
+    def close(self):
+        self.__transport.close()
+        logger.info(f"logout from {self.host}")
+
+
+def load_images_to_cargo(user: str, pwd: str, registry: str, images_tar):
+    client = docker.from_env()
+    login_info = client.login(username=user, password=pwd, registry=registry)
+    logger.info(f'docker login to {registry} {login_info}')
+    with open(images_tar, 'rb') as image_binary:
+        load_images_list = client.images.load(image_binary)
+        logger.info(f'docker load images {load_images_list}')
+    for image in load_images_list:
+        image_version = image.tags[0].split(":")[1]
+        image_name = image.tags[0].split(":")[0].split("/")[-1]
+        image_repository = f'{registry}/library/{image_name}'
+        image.tag(image_repository, image_version)
+        push_info = client.images.push(image_repository, tag=image_version)
+        logger.info(f'docker push {push_info}')

@@ -1,10 +1,12 @@
-from kubernetes.client import CustomObjectsApi, ApiClient, CoreV1Api, Configuration, BatchV1Api,V1PodStatus
-from log import logger
 import collections
-from utils import parse_resource, ONE_GIBI, ONE_MEBI
-from configparser import ConfigParser
 import urllib3
-import datetime
+
+import jsonpath
+
+from clusters import Cluster
+from log import logger
+from utils import parse_resource, ONE_GIBI, ONE_MEBI
+
 urllib3.disable_warnings()
 
 pod_metric_fields = [
@@ -25,23 +27,13 @@ node_metric_fields = [
 NodeMetric = collections.namedtuple('NodeMetric', node_metric_fields)
 
 
-class K8sClient:
-    def __init__(self):
-        config = ConfigParser()
-        config.read("config.ini")
-        self.token = config.get("kubernetes", "token")
-        self.host = "https://{}:6443".format(config.get("kubernetes", "api_host"))
-        self.configuration = Configuration()
-        self.configuration.api_key['authorization'] = self.token
-        self.configuration.api_key_prefix['authorization'] = 'Bearer'
-        self.configuration.host = self.host
-        self.configuration.verify_ssl = False
-        self.api_client = ApiClient(self.configuration)
-        self.api_client.configuration.debug = True
-        self.node_list = [i.strip() for i in config.get("kubernetes", "node").split(",")]
+class K8sClient(Cluster):
+    def __init__(self, kube_conf):
+        super(K8sClient, self).__init__(kube_conf)
+        self.node_list = jsonpath.jsonpath(super(K8sClient, self).get_node(), '$.items[*].metadata.name')
 
     def get_metric(self):
-        api_instance = CoreV1Api(self.api_client)
+        api_instance = self.core_v1_api
         pods = api_instance.list_pod_for_all_namespaces().items
         node_usages = [self.top_node(node) for node in self.node_list]
         pods_usages = sorted([self.top_pod(pod) for pod in pods], key=lambda x: x.memory, reverse=True)
@@ -49,7 +41,7 @@ class K8sClient:
 
     @logger.catch
     def top_node(self, node):
-        custom = CustomObjectsApi(self.api_client)
+        custom = self.custom_api
         data = custom.get_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes", node)
         node = data['metadata']['name']
         cpu = parse_resource(data['usage']['cpu'])
@@ -58,7 +50,7 @@ class K8sClient:
 
     @logger.catch
     def top_pods(self):
-        custom = CustomObjectsApi(self.api_client)
+        custom = self.custom_api
         data = custom.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "pods")
         usage_by_pod = collections.defaultdict(list)
         for pod_data in data['items']:
@@ -103,7 +95,7 @@ class K8sClient:
                          **self.aggregate_container_resource(pod))
 
     def get_job(self):
-        api_instance = BatchV1Api(self.api_client)
+        api_instance = self.batch_v1_api
         jobs = api_instance.list_job_for_all_namespaces()
         jobs_status = []
         for i in jobs.items:
@@ -120,7 +112,7 @@ class K8sClient:
         return {"desc": "jobs", "result": jobs_status}
 
     def get_core(self):
-        api_instance = CoreV1Api(self.api_client)
+        api_instance = self.core_v1_api
         component = api_instance.list_component_status()
         component_list = []
         for i in component.items:
@@ -129,7 +121,7 @@ class K8sClient:
         return {"desc": "component", "result": component_list}
 
     def get_readiness(self):
-        api_instance = CoreV1Api(self.api_client)
+        api_instance = self.core_v1_api
         node = api_instance.list_pod_for_all_namespaces()
         for i in node.items:
             for x in i.spec.containers:
@@ -137,7 +129,7 @@ class K8sClient:
                     print(i.metadata.name, x.readiness_probe.http_get)
 
     def get_node(self):
-        api_instance = CoreV1Api(self.api_client)
+        api_instance = self.core_v1_api
         nodes = api_instance.list_node()
         result = []
         for i in nodes.items:
@@ -154,7 +146,7 @@ class K8sClient:
         return {"desc": "node", "result": result}
 
     def get_pod(self):
-        api_instance = CoreV1Api(self.api_client)
+        api_instance = self.core_v1_api
         pods = api_instance.list_pod_for_all_namespaces()
         result = []
         for i in pods.items:
@@ -171,8 +163,3 @@ class K8sClient:
             pod['host'] = i.status.host_ip
             result.append(pod)
         return {"desc": "pod", "result": result}
-
-
-
-
-
