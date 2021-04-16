@@ -120,21 +120,14 @@ class K8sClient(Cluster):
             component_list.append({"status": status, "name": i.metadata.name})
         return {"desc": "component", "result": component_list}
 
-    def get_readiness(self):
-        api_instance = self.core_v1_api
-        node = api_instance.list_pod_for_all_namespaces()
-        for i in node.items:
-            for x in i.spec.containers:
-                if x.readiness_probe is not None:
-                    print(i.metadata.name, x.readiness_probe.http_get)
-
     def get_node(self):
         api_instance = self.core_v1_api
         nodes = api_instance.list_node()
         result = []
         for i in nodes.items:
             node = dict()
-            node['name'] = i.metadata.name
+            for x in i.status.address:
+                node[x.type] = x.address
             for s in i.status.conditions:
                 if s.type == "Ready":
                     node['status'] = "Ready" if s.status else "NotReady"

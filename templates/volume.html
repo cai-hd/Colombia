@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block nav %}
+    {% for i in nav %}
+        <li class="nav-item active">
+            <a class="nav-link" href={{ i }}>{{ i }}
+                <span class="sr-only">(current)</span>
+            </a>
+        </li>
+
+    {% endfor %}
+{% endblock %}
+{% block  content %}
+     <div class="container-fluid">
+  <br>
+  <div class="list-group">
+  <p class="list-group-item active">
+    <h7 class="list-group-item-heading">volume info </h7>
+  </p>
+      <ul class="list-group">
+          {% for k,v in volume['compass-stack'].items() %}
+            <li class="list-group-item ">{{  k  }}
+                <span class="col-4"></span>
+            <span class="btn-success">Ready</span>
+            </li>
+
+
+          {% endfor %}
+
+
+</ul>
+</div>
+  </div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{%  block styles %}
+    <style>
+    div.dataTables_wrapper {
+        margin-bottom: 3em;
+    }
+    </style>
+{% endblock %}
+
+{% block nav %}
+  {%  for i in nav %}
+      <li class="nav-item active">
+                <a class="nav-link" href="{{ i }}">{{ i }}
+                  <span class="sr-only">(current)</span>
+                </a>
+              </li>
+
+    {% endfor %}
+
+{% endblock %}
+{% block cluster %}
+        {%  for i in nav %}
+                      <a class="dropdown-item" href="/{{ i }}">{{ i }}</a>
+
+            {% endfor %}
+{% endblock %}
+{% block content %}
+    <div class="container-fluid">
+    <br>
+    <div>
+    <div>
+
+        <div class="list-group">
+  <p href="#" class="list-group-item active">
+    <h7 class="list-group-item-heading">pod info </h7>
+
+  </p>
+</div>
+    </div>
+    <table id="pod" class="display table table-striped table-bordered" style="width:100%">
+        <tr>
+            <th>ns</th>
+            <th>pod_name</th>
+            <th>status</th>
+            <th>restart</th>
+            <th>start_time</th>
+            <th>ip</th>
+            <th>host</th>
+        </tr>
+       {% for i in data['context']['pod']['result'] %}
+         <tr class="small">
+           <th>{{i['ns']}}</th>
+           <th>{{i['name']}}</th>
+           <th>{{i['status']}}</th>
+           <th>{{i['restart']}}</th>
+           <th>{{i['start_time']}}</th>
+           <th>{{i['ip']}}</th>
+             <th>{{i['host']}}</th>
+         </tr>
+        {% endfor %}
+    </table>
+
+</div>
+
+
+   <div>
+       <div>
+           <h4>pod_metric</h4>
+
+       </div>
+   </div>
+
+    <div>
+        <div>
+        <h4>Node_info</h4>
+    </div>
+    <table id="node" class="display table table-striped table-bordered" style="width:100%">
+
+        <thead>
+        <tr>
+                <th>Name</th>
+                <th>Docker</th>
+                <th >NodeLoad</th>
+                <th>Contrack</th>
+                <th>Openfile</th>
+                <th>Pid</th>
+                <th>dns</th>
+                <th>diskIO</th>
+                <th>diskUsage</th>
+                <th>nicIO</th>
+                <th>Zprocess</th>
+                <th>Ntp</th>
+                <th>containerd</th>
+                <th>kubelet</th>
+                <th>kubeproxy</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for k,v in node_info.items() %}
+
+          <tr class="small">
+          <td>{{ k }}</td>
+          <td>{{ v['docker']['dockerProcess'] }}</td>
+          <td>{{ v['nodeload']['loadaverage'] }}</td>
+          <td>{{ v['contrack']['contrack_used'] }}</td>
+                    <td>{{ v['openfile']['openfile_used'] }}</td>
+                    <td>{{ v['pid']['pid_used'] }}</td>
+                    <td></td>
+                    <td></td>
+                    <td>
+                        {% for r in v['diskusage'] %}
+                            {%  for a,v in r.items() %}
+                                 {{ v }}
+                                {% endfor %}
+                            {% endfor %}
+                    </td>
+                    <td>
+
+                    </td>
+                    <td>{{  v['zprocess']['checkpass'] }}</td>
+                    <td>{{  v['ntp']['checkpass'] }}</td>
+                    <td>{{ v['containerd']['checkpass'] }}</td>
+                    <td>{{ v['kubelet']['process'] }}</td>
+              <td>{{ v['kubeproxy']['porthealth'] }}</td>
+
+          </tr>
+        {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+    {{  super() }}
+    <script>
+      $(document).ready(function() {
+        $('.disable').DataTable({
+            "scrollX": true,
+            "autoWidth": false,
+        })
+
+
+
+
+
+    } );
+    </script>
+
+
+
+{% endblock %}
