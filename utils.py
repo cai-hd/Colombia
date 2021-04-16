@@ -1,12 +1,13 @@
 import re
 import sys
-
-import requests
 from configparser import ConfigParser
-from requests.auth import HTTPBasicAuth
-import paramiko
-from log import logger
+
 import docker
+import paramiko
+import requests
+from requests.auth import HTTPBasicAuth
+
+from log import logger
 
 ONE_MEBI = 1024 ** 2
 ONE_GIBI = 1024 ** 3
@@ -155,3 +156,33 @@ def load_images_to_cargo(user: str, pwd: str, registry: str, images_tar):
         image.tag(image_repository, image_version)
         push_info = client.images.push(image_repository, tag=image_version)
         logger.info(f'docker push {push_info}')
+
+
+def merge_node(dump, cid):
+    node_list = dump[cid]['context']['node']['result']
+    node_metric_list = dump[cid]['context']['metric']['nodes']
+    node_info = dump[cid]['node_info']
+    for i in node_list:
+        for m in node_metric_list:
+            if i['Hostname'] == m.node:
+                i['cpu_usage'] = m.cpu
+                i['mem_usage'] = m.memory
+        node_info[i['InternalIP']].update(i)
+    return node_info
+
+
+def merge_pod(dump, cid):
+    pods = dump[cid]['context']['pod']['result']
+    pod_metric_list = dump[cid]['context']['metric']['pods']
+    for i in pods:
+        for m in pod_metric_list:
+            if i['name'] == m.pod and i['ns'] == m.ns:
+                i['cpu'] = m.cpu
+                i['cpu_requests'] = m.cpu_requests
+                i['cpu_limits'] = m.cpu_limits
+                #i['start_time'] = f'{i["start_time"]:%Y-%m-%d %H:%M:%S }'
+                i['memory'] = m.memory
+                i['memory_requests'] = m.memory_requests
+                i['memory_limits'] = m.memory_limits
+    return pods
+

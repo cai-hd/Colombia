@@ -19,27 +19,196 @@
     {% endfor %}
 
 {% endblock %}
-{% block cluster %}
-        {%  for i in nav %}
-                      <a class="dropdown-item" href="/{{ i }}">{{ i }}</a>
 
-            {% endfor %}
-{% endblock %}
 {% block content %}
     <div class="container-fluid">
     <br>
-    <div>
+
+<div class="row">
+  <div class="col-sm-2">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title"> ETCD </h5>
+        <p class="card-text small">
+            {% for k,v in data['etcd_status'].items() %}
+            {{ k }} : {{ v['data'] }} {{ v['status'] }}<br>
+            {% endfor  %}
+        </p>
+        <span  class="badge badge-success">ready</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-2">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">API Server</h5>
+        <p class="card-text small">
+            {% for k in data['apiserver_status'] %}
+             {{ k  }}<br>
+            {% endfor  %}
+        </p>
+        <span class="badge badge-success">ready</span>
+      </div>
+    </div>
+  </div>
+
+
+<div class="col-sm-2">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Controller</h5>
+        <p class="card-text small">
+            {% for k in data['controller_status'] %}
+             {{ k  }}<br>
+            {% endfor  %}
+        </p>
+        <span class="badge badge-success">ready</span>
+      </div>
+    </div>
+  </div>
+
+
+<div class="col-sm-2">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Scheduler</h5>
+        <p class="card-text small">
+            {% for k in data['scheduler_status'] %}
+             {{ k  }}<br>
+            {% endfor  %}
+        </p>
+        <span class="badge badge-success">ready</span>
+      </div>
+    </div>
+  </div>
+
+<div class="col-sm-2">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">DNS</h5>
+        <p class="card-text small">
+
+
+                available:{{ data['coredns_status']['data']['available'] }}
+                ready: {{ data['coredns_status']['data']['ready'] }}
+                replicas : {{ data['coredns_status']['data']['replicas'] }}
+
+        </p>
+        <span class="badge badge-success">ready</span>
+      </div>
+    </div>
+  </div>
+<div class="col-sm-2">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">NSLookUp</h5>
+        <p class="card-text small">
+            {{ data['dns_nslookup']['data'] }}
+        </p>
+          {%  if data['dns_nslookup']['status']   %}
+        <span class="badge badge-success">ready</span>
+          {% else %}
+        <span class="badge badge-danger">error</span>
+          {% endif %}
+      </div>
+    </div>
+  </div>
+
+
+</div>
+
+
+
+</div>
+
+<hr>
+ <div class="container-fluid">
+
+      <div class="list-group">
+  <p href="#" class="list-group-item active">
+    <h7 class="list-group-item-heading">Resource Quota
+    <span class="small badge badge-light "></span>
+    </h7>
+
+
+  </p>
+</div>
+ <div class="row">
+<div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Cluster</h5>
+        <p class="card-text small">
+            {% for k,v in  data['cluster_quota'].items() %}
+    {{ k }} <br>
+        {%  for a,v in v.items() %}
+            {{  a }} {{  v }}<br>
+            {% endfor %}
+    {% endfor %}
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+ <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Tenants</h5>
+        <p class="card-text small">
+            {% for k,v in  data['tenants_quota'].items() %}
+    {{ k }} <br>
+        {%  for a,v in v.items() %}
+            {{  a }} {{  v }}<br>
+            {% endfor %}
+    {% endfor %}
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+
+
+ <div class="col-sm-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Partitions</h5>
+        <p class="card-text small">
+            {% for k,v in  data['partitions_quota'].items() %}
+    {{ k }} <br>
+        {%  for a,v in v.items() %}
+            {{  a }} {{  v }}<br>
+            {% endfor %}
+    {% endfor %}
+        </p>
+
+      </div>
+    </div>
+  </div>
+
+
+ </div>
+
+
+
+
+<hr>
+
     <div>
 
         <div class="list-group">
   <p href="#" class="list-group-item active">
-    <h7 class="list-group-item-heading">pod info </h7>
+    <h7 class="list-group-item-heading">POD_INFO
+    <span class="small badge badge-light "> total {{ data['pod_info'] | length }}</span>
+    </h7>
+
 
   </p>
 </div>
-    </div>
     <table id="pod" class="display table table-striped table-bordered" style="width:100%">
-        <tr>
+    <thead>
+    <tr>
             <th>ns</th>
             <th>pod_name</th>
             <th>status</th>
@@ -47,41 +216,57 @@
             <th>start_time</th>
             <th>ip</th>
             <th>host</th>
+            <th>cpu</th>
+            <th>cpu_requests</th>
+            <th>cpu_limits</th>
+            <th>memory</th>
+            <th>memory_requests</th>
+            <th>memory_limits</th>
         </tr>
-       {% for i in data['context']['pod']['result'] %}
-         <tr class="small">
-           <th>{{i['ns']}}</th>
-           <th>{{i['name']}}</th>
-           <th>{{i['status']}}</th>
-           <th>{{i['restart']}}</th>
-           <th>{{i['start_time']}}</th>
-           <th>{{i['ip']}}</th>
-             <th>{{i['host']}}</th>
-         </tr>
+    </thead>
+        <tbody>
+        {% for i in data['pod_info'] %}
+             <tr class="small">
+               <th>{{i['ns']}}</th>
+               <th>{{i['name']}}</th>
+               <th>{{i['status']}}</th>
+               <th>{{i['restart']}}</th>
+               <th>{{i['start_time']}}</th>
+               <th>{{i['ip']}}</th>
+               <th>{{i['host']}}</th>
+               <th>{{ i['cpu'] }}</th>
+               <th>{{ i['cpu_requests'] }}</th>
+               <th>{{ i['cpu_limits'] }}</th>
+               <th>{{ i['memory'] }}</th>
+               <th>{{ i['memory_requests'] }}</th>
+               <th>{{ i['memory_limits'] }}</th>
+             </tr>
         {% endfor %}
+        </tbody>
+
     </table>
 
 </div>
 
-
-   <div>
-       <div>
-           <h4>pod_metric</h4>
-
-       </div>
-   </div>
-
+<hr>
     <div>
-        <div>
-        <h4>Node_info</h4>
-    </div>
+               <div class="list-group">
+  <p href="#" class="list-group-item active">
+    <h7 class="list-group-item-heading">NODE_INFO
+    <span class="small badge badge-light "> total {{ data['node_info'] | length }}</span>
+    </h7>
+
+
+  </p>
+</div>
     <table id="node" class="display table table-striped table-bordered" style="width:100%">
 
         <thead>
         <tr>
-                <th>Name</th>
+                <th>IP</th>
+                <th>Hostname</th>
                 <th>Docker</th>
-                <th >NodeLoad</th>
+                <th>NodeLoad</th>
                 <th>Contrack</th>
                 <th>Openfile</th>
                 <th>Pid</th>
@@ -94,35 +279,44 @@
                 <th>containerd</th>
                 <th>kubelet</th>
                 <th>kubeproxy</th>
+                <th>Docker_version</th>
+                <th>status</th>
+                <th>kernel</th>
+                <th>capacity</th>
+                <th>usage</th>
             </tr>
         </thead>
         <tbody>
-        {% for k,v in node_info.items() %}
+        {% for k,v in data['node_info'].items() %}
 
           <tr class="small">
           <td>{{ k }}</td>
+           <td>{{ v['Hostname'] }}</td>
           <td>{{ v['docker']['dockerProcess'] }}</td>
           <td>{{ v['nodeload']['loadaverage'] }}</td>
           <td>{{ v['contrack']['contrack_used'] }}</td>
-                    <td>{{ v['openfile']['openfile_used'] }}</td>
-                    <td>{{ v['pid']['pid_used'] }}</td>
-                    <td></td>
-                    <td></td>
-                    <td>
-                        {% for r in v['diskusage'] %}
-                            {%  for a,v in r.items() %}
-                                 {{ v }}
-                                {% endfor %}
-                            {% endfor %}
-                    </td>
-                    <td>
-
-                    </td>
-                    <td>{{  v['zprocess']['checkpass'] }}</td>
-                    <td>{{  v['ntp']['checkpass'] }}</td>
-                    <td>{{ v['containerd']['checkpass'] }}</td>
-                    <td>{{ v['kubelet']['process'] }}</td>
+          <td>{{ v['openfile']['openfile_used'] }}</td>
+          <td>{{ v['pid']['pid_used'] }}</td>
+          <td>1</td>
+          <td>1</td>
+          <td>
+            {% for r in v['diskusage'] %}
+                {%  for a,v in r.items() %}
+                     {{ v }}
+                    {% endfor %}
+                {% endfor %}
+          </td>
+            <td>1</td>
+            <td>{{  v['zprocess']['checkpass'] }}</td>
+            <td>{{  v['ntp']['checkpass'] }}</td>
+            <td>{{ v['containerd']['checkpass'] }}</td>
+            <td>{{ v['kubelet']['process'] }}</td>
               <td>{{ v['kubeproxy']['porthealth'] }}</td>
+              <td>{{ v['container_runtime'] }}</td>
+              <td>{{ v['status'] }}</td>
+              <td>{{ v['kernel'] }}</td>
+              <td>{{ v['cpu']}} / {{   v['memory']  }}</td>
+              <td>{{ v['cpu_usage']}} / {{   v['mem_usage']  }}</td>
 
           </tr>
         {% endfor %}
@@ -137,10 +331,16 @@
     {{  super() }}
     <script>
       $(document).ready(function() {
-        $('.disable').DataTable({
+        $('.display').DataTable({
             "scrollX": true,
             "autoWidth": false,
-        })
+            "paging":   true,
+            "ordering": true,
+            "info":     true
+        });
+
+
+
 
 
 

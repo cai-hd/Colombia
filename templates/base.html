@@ -22,27 +22,24 @@
   </button>
           <div class="collapse navbar-collapse">
             <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-                <a class="nav-link" href="#">Debug
-                  <span class="sr-only">(current)</span>
-                </a>
-              </li>
+
               {% block nav %}
                 {% endblock %}
-
-             <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          POD
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-          {% block cluster %}
-            {% endblock %}
-        </div>
-      </li>
             </ul>
 
           </div>
 
+
+            <div class="navbar-collapse collapse ">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="#">Debug</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Export</a>
+            </li>
+        </ul>
+    </div>
 
         </nav>
         </div>
@@ -50,6 +47,18 @@
         <!-- Your page content -->
         {% block content %}{% endblock %}
 
+
+
+        <footer class="page-footer font-small blue pt-4">
+
+  <!-- Footer Links -->
+
+  <div class="footer-copyright text-center py-3">© Colombia
+    <p> compass health check tool</p>
+  </div>
+  <!-- Copyright -->
+
+</footer>
 
 
         <script type="text/javascript" src="/static/js/jquery-3.6.0.min.js"></script>
