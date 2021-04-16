@@ -126,7 +126,7 @@ class K8sClient(Cluster):
         result = []
         for i in nodes.items:
             node = dict()
-            for x in i.status.address:
+            for x in i.status.addresses:
                 node[x.type] = x.address
             for s in i.status.conditions:
                 if s.type == "Ready":
