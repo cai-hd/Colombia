@@ -14,7 +14,6 @@
 import yaml
 import base64
 import os
-from pathlib import Path
 # others
 from kubernetes import client, config
 # project
@@ -65,8 +64,7 @@ class K8sClusters:
             client_key_data = cluster["spec"]["auth"]["kubeConfig"]["users"]["kubectl"]["client-key-data"]
             dir_path = os.getcwd()
             file_path = f'{dir_path}/tmp/cluster/{name}'
-            p = Path(os.path.dirname(file_path))
-            p.mkdir(exist_ok=True)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w") as kf:
                 kube_conf_template_data["clusters"][0]["cluster"]["server"] = server
                 kube_conf_template_data["clusters"][0]["cluster"][
@@ -93,11 +91,10 @@ class K8sClusters:
         private_pem_data = base64.b64decode(private_pem).decode("utf-8")
         dir_path = os.getcwd()
         ssh_key_file_path = f'{dir_path}/tmp/private.pem'
-        p = Path(os.path.dirname(ssh_key_file_path))
-        p.mkdir(exist_ok=True)
+        os.makedirs(os.path.dirname(ssh_key_file_path), exist_ok=True)
         with open(ssh_key_file_path, "w") as pm:
             pm.write(private_pem_data)
-        os.chmod("./tmp/private.pem", 0o600)
+        os.chmod(ssh_key_file_path, 0o600)
         return ssh_key_file_path
 
     def get_cm(self, name, ns) -> dict:
