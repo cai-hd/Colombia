@@ -206,7 +206,7 @@ class CheckGlobal(K8sClusters):
         self.check_etcd_status()
         self.check_component_status()
         self.check_volumes_status()
-        # self.check_node_info()
+        self.check_node_info()
 
 
 class CheckK8s(Cluster):
