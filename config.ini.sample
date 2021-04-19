@@ -1,16 +1,27 @@
 [kubernetes]
-node = 192.168.0.100
-api_host = 192.168.0.101
-token = xxxxxx
+# 如果 k8s_type 为 compass，那么k8s_conf_path应该为控制集群的配置文件
+k8s_conf_path = /compass/.kubectl.kubeconfig
+# 具有平台管理员权限的租户及密码
+admin_user_name = admin
+admin_user_pwd = Pwd123456
+# 外部域名解析检查，以空格分割
+externalDomain = www.sina.com www.baidu.com www.fujiangong.com
+# pod 内部域名解析域名，以空格分割
+internalDomain = kubernetes.default coredns.kube-system.svc.cluster.local
 
-
-
-[data]
-node =
-key_path =
-ssh_port =
-user =
-
+[cargo]
+# cargo 集群其中一个节点
+node_ip = 10.0.1.126
+# cargo ssh用户
+ssh_user = root
+# cargo ssh用户密码
+ssh_pwd = Caicloud@2020
+# cargo ssh端口
+ssh_port = 22
+# harbor镜像仓库的登录用户
+harbor_user = admin
+# harbor镜像仓库的登录用户密码
+harbor_pwd = Pwd123456
 
 [cmd]
 
