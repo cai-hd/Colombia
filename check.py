@@ -22,7 +22,7 @@ from kubernetes import client
 from kubernetes.stream import stream
 
 from clusters import K8sClusters, Cluster
-from utils import RemoteClientCompass, config_obj, parse_resource, load_images_to_cargo
+from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
 from nodecollect import nodecheck
 
@@ -108,14 +108,17 @@ class CheckGlobal(K8sClusters):
                                               int(self.machines[master_ip]['spec']['sshPort']),
                                               self.machines[master_ip]['spec']['auth']['password'],
                                               self.machines[master_ip]['spec']['auth']['key'])
-                get_member_cmd = f'ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --cacert=/var/lib/etcd/ssl/ca.crt --cert=/var/lib/etcd/ssl/etcd.crt --key=/var/lib/etcd/ssl/etcd.key --endpoints=https://{master_ip}:2379 endpoint health'
-                ret = ssh_obj.cmd(get_member_cmd)
-                status = ret[0].split()[2].rstrip(":")
-                if status == "healthy":
-                    took_time = ret[0].split()[8]
-                    self.checkout[cluster]['etcd_status'][master_ip] = {'data': took_time, 'status': True}
-                else:
-                    self.checkout[cluster]['etcd_status'][master_ip] = {'data': ret, 'status': False}
+                for port in ['2379', '2381']:
+                    get_member_cmd = f'ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --cacert=/var/lib/etcd/ssl/ca.crt --cert=/var/lib/etcd/ssl/etcd.crt --key=/var/lib/etcd/ssl/etcd.key --endpoints=https://{master_ip}:{port} endpoint health'
+                    ret = ssh_obj.cmd(get_member_cmd)
+                    status = ret[0].split()[2].rstrip(":")
+                    if status == "healthy":
+                        took_time = ret[0].split()[8]
+                        self.checkout[cluster]['etcd_status'][f"{master_ip}:{port}"] = {'data': took_time,
+                                                                                        'status': True}
+                    else:
+                        self.checkout[cluster]['etcd_status'][f"{master_ip}:{port}"] = {'data': ret, 'status': False}
+                        break
                 ssh_obj.close()
 
     def check_volumes_status(self):
@@ -176,9 +179,9 @@ class CheckGlobal(K8sClusters):
     def load_busybox_image(self):
         logger.info(f"load and push busybox image")
         registry = self.get_cm('platform-info', 'default')['data']['cargo_registry']
-        user = config_obj.get('cargo', 'harbor_user')
-        pwd = config_obj.get('cargo', 'harbor_pwd')
-        load_images_to_cargo(user, pwd, registry, './busybox-1.28.0')
+        # user = config_obj.get('cargo', 'harbor_user')
+        # pwd = config_obj.get('cargo', 'harbor_pwd')
+        # load_images_to_cargo(user, pwd, registry, './busybox-1.28.0')
         _busybox_images = f'{registry}/library/busybox:1.28.0'
         return _busybox_images
 
@@ -273,34 +276,42 @@ class CheckK8s(Cluster):
         clusters = self.get_clusterquotas()
         physical_cpu_total = parse_resource(clusters['system']['status']['physical']['capacity']['cpu'])
         physical_cpu_unused = parse_resource(clusters['system']['status']['physical']['allocatable']['cpu'])
-        physical_cpu_used = physical_cpu_total - physical_cpu_unused
-        physical_cpu_status = True if physical_cpu_used < physical_cpu_total * 0.8 else False
+        physical_cpu_used = "{:.2f}".format(physical_cpu_total - physical_cpu_unused)
+        physical_cpu_status = True if physical_cpu_unused > physical_cpu_total * 0.2 else False
+        physical_cpu_unused = "{:.2f}".format(physical_cpu_unused)
 
         physical_mem_total = parse_resource(clusters['system']['status']['physical']['capacity']['memory'])
         physical_mem_unused = parse_resource(clusters['system']['status']['physical']['allocatable']['memory'])
-        physical_mem_used = physical_mem_total - physical_mem_unused
-        physical_mem_status = True if physical_mem_used < physical_mem_total * 0.8 else False
+        physical_mem_used = "{:.2f}Gi".format((physical_mem_total - physical_mem_unused)/ONE_GIBI)
+        physical_mem_status = True if physical_mem_unused > physical_mem_total * 0.2 else False
+        physical_mem_unused = "{:.2f}Gi".format(physical_mem_unused/ONE_GIBI)
+        physical_mem_total = "{:.2f}Gi".format(physical_mem_total/ONE_GIBI)
 
         logical_cpu_request_total = parse_resource(clusters['system']['status']['logical']['total']['requests.cpu'])
         logical_cpu_request_used = parse_resource(clusters['system']['status']['logical']['allocated']['requests.cpu'])
-        logical_cpu_request_unused = logical_cpu_request_total - logical_cpu_request_used
+        logical_cpu_request_unused = "{:.2f}".format(logical_cpu_request_total - logical_cpu_request_used)
         logical_cpu_request_status = True if logical_cpu_request_used < logical_cpu_request_total * 0.8 else False
+        logical_cpu_request_used = "{:.2f}".format(logical_cpu_request_used)
 
         logical_cpu_limit_total = parse_resource(clusters['system']['status']['logical']['total']['limits.cpu'])
         logical_cpu_limit_used = parse_resource(clusters['system']['status']['logical']['allocated']['limits.cpu'])
-        logical_cpu_limit_unused = logical_cpu_limit_total - logical_cpu_limit_used
+        logical_cpu_limit_unused = "{:.2f}".format(logical_cpu_limit_total - logical_cpu_limit_used)
         logical_cpu_limit_status = True if logical_cpu_limit_used < logical_cpu_limit_total * 0.8 else False
+        logical_cpu_limit_used = "{:.2f}".format(logical_cpu_limit_used)
 
         logical_mem_request_total = parse_resource(clusters['system']['status']['logical']['total']['requests.memory'])
-        logical_mem_request_used = parse_resource(
-            clusters['system']['status']['logical']['allocated']['requests.memory'])
-        logical_mem_request_unused = logical_mem_request_total - logical_mem_request_used
+        logical_mem_request_used = parse_resource(clusters['system']['status']['logical']['allocated']['requests.memory'])
+        logical_mem_request_unused = "{:.2f}Gi".format((logical_mem_request_total - logical_mem_request_used)/ONE_GIBI)
         logical_mem_request_status = True if logical_mem_request_used < logical_mem_request_total * 0.8 else False
+        logical_mem_request_total = "{:.2f}Gi".format(logical_mem_request_total / ONE_GIBI)
+        logical_mem_request_used = "{:.2f}Gi".format(logical_mem_request_used / ONE_GIBI)
 
         logical_mem_limit_total = parse_resource(clusters['system']['status']['logical']['total']['limits.memory'])
         logical_mem_limit_used = parse_resource(clusters['system']['status']['logical']['allocated']['limits.memory'])
-        logical_mem_limit_unused = logical_mem_limit_total - logical_mem_limit_used
+        logical_mem_limit_unused = "{:.2f}Gi".format((logical_mem_limit_total - logical_mem_limit_used)/ONE_GIBI)
         logical_mem_limit_status = True if logical_mem_limit_used < logical_mem_limit_total * 0.8 else False
+        logical_mem_limit_total = "{:.2f}Gi".format(logical_mem_limit_total / ONE_GIBI)
+        logical_mem_limit_used = "{:.2f}Gi".format(logical_mem_limit_used / ONE_GIBI)
 
         self.checkout[self.cluster_name]['cluster_quota'] = {
             "physical": {
@@ -324,23 +335,29 @@ class CheckK8s(Cluster):
         for key in objs.keys():
             cpu_request_total = parse_resource(objs[key]['status']['hard']['requests.cpu'])
             cpu_request_used = parse_resource(objs[key]['status']['used']['requests.cpu'])
-            cpu_request_unused = cpu_request_total - cpu_request_used
+            cpu_request_unused = "{:.2f}".format(cpu_request_total - cpu_request_used)
             cpu_request_status = True if cpu_request_used < cpu_request_total * 0.8 else False
+            cpu_request_used = "{:.2f}".format(cpu_request_used)
 
             mem_request_total = parse_resource(objs[key]['status']['hard']['requests.memory'])
             mem_request_used = parse_resource(objs[key]['status']['used']['requests.memory'])
-            mem_request_unused = mem_request_total - mem_request_used
+            mem_request_unused = "{:.2f}".format((mem_request_total - mem_request_used)/ONE_GIBI)
             mem_request_status = True if mem_request_used < mem_request_total * 0.8 else False
+            mem_request_total = "{:.2f}Gi".format(mem_request_total / ONE_GIBI)
+            mem_request_used = "{:.2f}Gi".format(mem_request_used / ONE_GIBI)
 
             cpu_limit_total = parse_resource(objs[key]['status']['hard']['limits.cpu'])
             cpu_limit_used = parse_resource(objs[key]['status']['used']['limits.cpu'])
-            cpu_limit_unused = cpu_limit_total - cpu_limit_used
+            cpu_limit_unused = "{:.2f}".format(cpu_limit_total - cpu_limit_used)
             cpu_limit_status = True if cpu_limit_used < cpu_limit_total * 0.8 else False
+            cpu_limit_used = "{:.2f}".format(cpu_limit_used)
 
             mem_limit_total = parse_resource(objs[key]['status']['hard']['limits.memory'])
             mem_limit_used = parse_resource(objs[key]['status']['used']['limits.memory'])
-            mem_limit_unused = mem_limit_total - mem_limit_used
+            mem_limit_unused = "{:.2f}".format((mem_limit_total - mem_limit_used)/ONE_GIBI)
             mem_limit_status = True if mem_limit_used < mem_limit_total * 0.8 else False
+            mem_limit_total = "{:.2f}Gi".format(mem_limit_total / ONE_GIBI)
+            mem_limit_used = "{:.2f}Gi".format(mem_limit_used / ONE_GIBI)
             data = dict()
             data[key] = self.__get_resource_json(cpu_request_total, cpu_request_used, cpu_request_unused,
                                                  cpu_request_status, cpu_limit_total, cpu_limit_used, cpu_limit_unused,
@@ -395,7 +412,7 @@ class CheckK8s(Cluster):
             node_ip = pod['status']['host_ip']
             pod_ip = pod['status']['pod_ip']
             if node_ip not in node_pod_ip.keys():
-                node_pod_ip[node_ip] = []
+                node_pod_ip[node_ip] = list()
             node_pod_ip[node_ip].append(pod_ip)
         for node in node_pod_ip.keys():
             node_pod_ip[node] = set(node_pod_ip[node]) - set(node_pod_ip.keys())
@@ -447,6 +464,7 @@ class CheckK8s(Cluster):
     def del_check_pod(self):
         try:
             self.core_v1_api.delete_namespaced_pod('check-pod', 'default')
+            logger.info('delete check-pod in default ns')
         except client.exceptions.ApiException:
             logger.info('pod check-pod not in default')
 
@@ -459,4 +477,3 @@ class CheckK8s(Cluster):
         self.check_partitions_quotas()
         self.check_dns()
         self.check_network()
-
