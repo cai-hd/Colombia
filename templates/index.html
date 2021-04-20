@@ -328,7 +328,6 @@
 {% endblock %}
 
 {% block scripts %}
-    {{  super() }}
     <script>
       $(document).ready(function() {
         $('.display').DataTable({
@@ -338,13 +337,6 @@
             "ordering": true,
             "info":     true
         });
-
-
-
-
-
-
-
 
     } );
     </script>

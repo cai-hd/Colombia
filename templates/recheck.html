@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block styles %}
+    <style>
+        pre {
+            display: block;
+            font-family: monospace;
+            padding: 9.5px;
+            margin: 0 0 10px;
+            font-size: 13px;
+            line-height: 1.42857143;
+            color: white;
+            word-break: break-all;
+            word-wrap: break-word;
+            background-color: black;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+
+{% endblock %}
+{% block nav %}
+    {% for i in nav %}
+        <li class="nav-item active">
+            <a class="nav-link" href={{ i }}>{{ i }}
+                <span class="sr-only">(current)</span>
+            </a>
+        </li>
+
+    {% endfor %}
+{% endblock %}
+{% block  content %}
+    <div class="container-fluid">
+        <br>
+        <div>
+            <div class="list-group">
+                <p href="#" class="list-group-item active">
+                    <h7 class="list-group-item-heading">Re-check platform health
+                        <button class="btn-dark" id="background">Execute</button>
+                                                  <span><button class="btn-danger" id="clear">clear</button></span>
+
+                    </h7>
+                </p>
+            </div>
+
+            <div>
+          <pre>
+              {{ get_flashed_messages() }}
+          <p id="log"> </p>
+      </pre>
+            </div>
+
+        </div>
+
+    </div>
+
+    {% block scripts %}
+        <script type="text/javascript" src="/static/js/jquery-3.6.0.min.js"></script>
+        <script type="text/javascript" src="/static/js/socket.io.min.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function () {
+                var namespace = '/task';
+                var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+                console.log(socket)
+                socket.on('info', function (msg) {
+                    console.log(msg);
+                    var t = new Date();
+                    $('#log').append('Recived: ' + t.toLocaleTimeString() + '->' + msg.data + '<br>');
+                });
+                $('#background').on('click', function () {
+                    $.get("{{ url_for('start_background_task') }}");
+                });
+
+                $("#clear").click(function(){
+                  $('#log').text('');
+                });
+            });
+        </script>
+
+
+    {% endblock %}
+
+{% endblock %}

@@ -1,17 +1,77 @@
 import pickle
-
-from flask import Flask, render_template
+import eventlet
+from celery import Celery
+from flask import Flask, render_template, request, jsonify, make_response,flash
+from redis import Redis
+from flask_socketio import SocketIO,emit
+from main import check
 
 from utils import merge_pod, merge_node
 
-app = Flask(__name__)
 
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
 f = open('dump', 'rb')
 data = pickle.load(f)
-print(data['compass-stack'].keys())
+app.config['BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config['CELERY_ACCEPT_CONTENT'] = ['json']
+app.config['REDIS_URL'] = 'redis://localhost:6379/0'
+
+socketio = SocketIO(app, async_mode='eventlet', message_queue=app.config['CELERY_RESULT_BACKEND'])
+eventlet.monkey_patch()
+redis = Redis("localhost")
+celery = Celery(app.name)
+celery.conf.update(app.config)
+import threading
 
 
-@app.route('/<cid>', defaults={'cid': 'compass-stack'})
+class Listener(threading.Thread):
+    def __init__(self, r, channels, app):
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.redis = r
+        self.pubsub = self.redis.pubsub()
+        self.pubsub.psubscribe(channels)
+        self.app = app
+
+    def work(self, item):
+        with app.test_request_context('/recheck'):
+            msg = item['data']
+            if isinstance(msg, bytes):
+                msg = item['data'].decode('utf-8')
+                emit("info", {'data': msg}, namespace="/task", broadcast=True)
+
+    def run(self):
+        for item in self.pubsub.listen():
+            self.work(item)
+
+
+@celery.task
+def background_task():
+    check()
+
+
+@socketio.on('connect', namespace='/task')
+def connect_host():
+    socketio.emit('info', {'data':'client connect'}, namespace='/task')
+
+
+@app.route('/task')
+def start_background_task():
+    background_task.delay()
+    return jsonify({'status': 'start'},200)
+
+
+@app.route("/")
+def index():
+    nav = [*data]
+    cid = 'compass-stack'
+    data[cid]['node_info'] = merge_node(data, cid)
+    data[cid]['pod_info'] = merge_pod(data, cid)
+    return render_template("index.html", nav=nav, data=data[cid])
+
+
 @app.route('/<cid>')
 def cluster(cid):
     nav = [*data]
@@ -34,5 +94,15 @@ def volume():
     return render_template("volume.html", nav=nav, volume=volume)
 
 
+@app.route("/recheck")
+def recheck():
+    nav = [*data]
+    flash("xxxxxxxx")
+    return render_template("recheck.html", nav=nav)
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    r = Redis()
+    client = Listener(r, ['message'],app)
+    client.start()
+    socketio.run(app=app, host="0.0.0.0", port=5000, debug=True)

@@ -1,11 +1,13 @@
-import os
+import loguru
+
 from k8s import K8sClient
 import datetime
 from check import CheckGlobal, CheckK8s
 from pathlib import Path
 import pickle
+from log import logger
 
-
+@logger.catch
 def check():
     control_k8s = CheckGlobal()
     busybox_images = control_k8s.load_busybox_image()
@@ -27,6 +29,7 @@ def check():
             context['now'] = now
         check_out[cluster_name]['context'] = context
     return check_out
+
 
 
 if __name__ == "__main__":

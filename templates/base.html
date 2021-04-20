@@ -6,6 +6,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link  rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css">
         <link rel="stylesheet" type="text/css" href="/static/css/datatables.min.css">
+        <link rel="shortcut icon" href="/static/favicon.ico">
+
         {% block styles %}
         {% endblock %}
 
@@ -16,7 +18,7 @@
         <div class="container-fluid">
 
            <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-           <a class="navbar-brand" href="#">Colombia</a>
+           <a class="navbar-brand" href="/">Colombia</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -42,7 +44,7 @@
             </li>
             <li class="nav-item">
 
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="{{ url_for("recheck") }}">
                     <button class="btn-success">Recheck</button>
                 </a>
             </li>
@@ -62,7 +64,7 @@
   <!-- Footer Links -->
 
   <div class="footer-copyright text-center py-3">© Colombia
-    <p> compass health check tool</p>
+    <p> compass health check tool by Ops Team</p>
   </div>
   <!-- Copyright -->
 
