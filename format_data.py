@@ -48,7 +48,7 @@ class Listener(threading.Thread):
             self.work(item)
 
 
-@celery.task
+@celery.task(name='task.check')
 def background_task():
     check()
 
