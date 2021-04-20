@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, jsonify, make_response,flash
 from redis import Redis
 from flask_socketio import SocketIO,emit
 from main import check
+from flask_celery_conf import make_celery
 
 from utils import merge_pod, merge_node
 
@@ -13,16 +14,16 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 f = open('dump', 'rb')
 data = pickle.load(f)
-app.config['BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
-app.config['CELERY_ACCEPT_CONTENT'] = ['json']
+app.config['broker_url'] = 'redis://localhost:6379/0'
+app.config['result_backend'] = 'redis://localhost:6379/0'
+app.config['accept_content'] = ['json']
 app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 
-socketio = SocketIO(app, async_mode='eventlet', message_queue=app.config['CELERY_RESULT_BACKEND'])
+socketio = SocketIO(app, async_mode='eventlet', message_queue=app.config['result_backend'])
 eventlet.monkey_patch()
 redis = Redis("localhost")
-celery = Celery(app.name)
-celery.conf.update(app.config)
+celery = make_celery(app)
+
 import threading
 
 
