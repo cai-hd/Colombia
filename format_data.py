@@ -1,13 +1,14 @@
 import pickle
 import eventlet
-from celery import Celery
+eventlet.monkey_patch()
+
 from flask import Flask, render_template, request, jsonify, make_response,flash
 from redis import Redis
 from flask_socketio import SocketIO,emit
 from main import check
-from flask_celery_conf import make_celery
-
 from utils import merge_pod, merge_node
+import threading
+
 
 
 app = Flask(__name__)
@@ -20,11 +21,8 @@ app.config['accept_content'] = ['json']
 app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 
 socketio = SocketIO(app, async_mode='eventlet', message_queue=app.config['result_backend'])
-eventlet.monkey_patch()
 redis = Redis("localhost")
-celery = make_celery(app)
 
-import threading
 
 
 class Listener(threading.Thread):
@@ -37,31 +35,17 @@ class Listener(threading.Thread):
         self.app = app
 
     def work(self, item):
-        with app.test_request_context('/recheck'):
+        with app.test_request_context('/demo'):
             msg = item['data']
             if isinstance(msg, bytes):
                 msg = item['data'].decode('utf-8')
-                emit("info", {'data': msg}, namespace="/task", broadcast=True)
+                emit("update", {'data': msg}, namespace="/work", broadcast=True)
 
     def run(self):
         for item in self.pubsub.listen():
             self.work(item)
 
 
-@celery.task(name='task.check')
-def background_task():
-    check()
-
-
-@socketio.on('connect', namespace='/task')
-def connect_host():
-    socketio.emit('info', {'data':'client connect'}, namespace='/task')
-
-
-@app.route('/task')
-def start_background_task():
-    background_task.delay()
-    return jsonify({'status': 'start'},200)
 
 
 @app.route("/")
@@ -100,6 +84,84 @@ def recheck():
     nav = [*data]
     flash("xxxxxxxx")
     return render_template("recheck.html", nav=nav)
+
+
+
+
+workerObject = None
+
+class Worker(object):
+
+    switch = False
+    unit_of_work = 0
+
+    def __init__(self, socketio):
+        """
+        assign socketio object to emit
+        """
+        self.socketio = socketio
+        self.switch = True
+
+
+
+    def do_work(self):
+        """
+        do work and emit message
+        """
+
+        while self.switch:
+            self.unit_of_work += 1
+            self.socketio.emit("update", {"data": self.unit_of_work}, namespace="/work")
+            eventlet.sleep(1)
+
+
+    def stop(self):
+        """
+        stop the loop
+        """
+        self.switch = False
+
+
+@app.route('/check')
+def demo():
+    """
+    renders demo.html
+    """
+    nav = [*data]
+    return render_template('recheck.html',nav=nav)
+
+
+
+@socketio.on('connect', namespace='/work')
+def connect():
+    """
+    connect
+    """
+
+    global worker
+    worker = Worker(socketio)
+    emit("update", {"data": "connected"})
+
+
+@socketio.on('start', namespace='/work')
+def start_work():
+    """
+    trigger background thread
+    """
+    emit("update", {"data": "starting worker"})
+
+    # notice that the method is not called - don't put braces after method name
+    socketio.start_background_task(target=check)
+
+
+@socketio.on('stop', namespace='/work')
+def stop_work():
+    """
+    trigger background thread
+    """
+
+    worker.stop()
+    emit("update", {"data": "worker has been stoppped"})
 
 
 if __name__ == "__main__":

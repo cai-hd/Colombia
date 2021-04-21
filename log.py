@@ -9,7 +9,7 @@ class RedisHandler(logging.Handler):
         logging.Handler.__init__(self)
 
         self.r_server = redis.Redis(host)
-        self.formatter = logging.Formatter("%(asctime)s - %(message)s")
+        self.formatter = logging.Formatter("%(message)s")
 
     def emit(self, record):
         self.r_server.publish("message", self.format(record))
@@ -38,7 +38,7 @@ def create_logger():
     custom_logger.add(
         RedisHandler(),
         colorize=False,
-        level="ERROR",
+        level="INFO",
         catch=True,
         format="<light-cyan>{time:MM-DD-YYYY HH:mm:ss}</light-cyan> | \
     		<light-red>{level}</light-red>: \
