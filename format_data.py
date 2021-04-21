@@ -7,7 +7,7 @@ from redis import Redis
 from flask_socketio import SocketIO,emit
 from main import check
 from utils import merge_pod, merge_node
-import threading
+
 
 
 
@@ -24,28 +24,15 @@ socketio = SocketIO(app, async_mode='eventlet', message_queue=app.config['result
 redis = Redis("localhost")
 
 
-
-class Listener(threading.Thread):
-    def __init__(self, r, channels, app):
-        threading.Thread.__init__(self)
-        self.daemon = True
-        self.redis = r
-        self.pubsub = self.redis.pubsub()
-        self.pubsub.psubscribe(channels)
-        self.app = app
-
-    def work(self, item):
-        with app.test_request_context('/demo'):
+def listener(channels):
+    pub_sub = redis.pubsub()
+    pub_sub.psubscribe(channels)
+    with app.test_request_context('/recheck'):
+        for item in pub_sub.listen():
             msg = item['data']
             if isinstance(msg, bytes):
                 msg = item['data'].decode('utf-8')
                 emit("update", {'data': msg}, namespace="/work", broadcast=True)
-
-    def run(self):
-        for item in self.pubsub.listen():
-            self.work(item)
-
-
 
 
 @app.route("/")
@@ -86,9 +73,8 @@ def recheck():
     return render_template("recheck.html", nav=nav)
 
 
-
-
 workerObject = None
+
 
 class Worker(object):
 
@@ -165,7 +151,5 @@ def stop_work():
 
 
 if __name__ == "__main__":
-    r = Redis()
-    client = Listener(r, ['message'],app)
-    client.start()
+    socketio.start_background_task(listener, ("message",))
     socketio.run(app=app, host="0.0.0.0", port=5000, debug=True)
