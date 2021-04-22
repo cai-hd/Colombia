@@ -82,7 +82,11 @@ def recheck():
 
 @socket_io.on('connect', namespace='/work')
 def connect():
-    emit("update", {"data": "connected"})
+    if thread is None or thread.is_alive() is False:
+        emit("update", {"data": "connected......"})
+    elif thread.is_alive():
+        emit("update", {"data": "Check thread is working ......"})
+
 
 
 
@@ -91,10 +95,10 @@ def connect():
 def start_work():
     global thread
     with thread_lock:
-        if thread is None:
+        if thread is None or thread.is_alive() is False:
             emit("update", {"data": "starting worker"})
             thread = socket_io.start_background_task(target=check)
-        else:
+        elif thread.is_alive():
             emit("update", {"data": "Check thread is working ......"})
 
 
