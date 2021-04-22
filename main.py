@@ -1,11 +1,10 @@
-import loguru
-
 from k8s import K8sClient
 import datetime
 from check import CheckGlobal, CheckK8s
 from pathlib import Path
 import pickle
 from log import logger
+from redis import Redis
 
 @logger.catch
 def check():
@@ -28,13 +27,12 @@ def check():
             context[i] = context_method()
             context['now'] = now
         check_out[cluster_name]['context'] = context
-    return check_out
+    r = Redis("localhost")
+    dump = pickle.dumps(check_out)
+    r.set("report", dump)
+    logger.info("report save to redis has been completed")
+    return True
 
 
 
-if __name__ == "__main__":
-    # generate_report()
-    check_data = check()
-    f = open("dump", 'wb')
-    pickle.dump(check_data, f)
-    f.close()
+

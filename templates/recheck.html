@@ -1,4 +1,9 @@
 {% extends "base.html" %}
+
+{% block head %}
+    {{ super() }}
+    <script type="text/javascript" src="/static/js/socket.io.min.js"></script>
+{% endblock %}
 {% block styles %}
     <style>
         pre {
@@ -25,12 +30,13 @@
                 <span class="sr-only">(current)</span>
             </a>
         </li>
-
     {% endfor %}
 {% endblock %}
+
 {% block  content %}
     <div class="container-fluid">
         <br>
+
         <div>
             <div class="list-group">
                 <p href="#" class="list-group-item active">
@@ -44,34 +50,30 @@
 
             <div>
           <pre>
-              {{ get_flashed_messages() }}
-          <p id="log"> </p>
-      </pre>
+                 <span>{{ get_flashed_messages()[0] }}</span>
+                 <p id="log"> </p>
+          </pre>
             </div>
-
         </div>
-
     </div>
+    {% endblock %}
+
 
     {% block scripts %}
-        <script type="text/javascript" src="/static/js/socket.io.min.js"></script>
         <script type="text/javascript">
             $(document).ready(function() {
                 var namespace = "/work"
                 var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+                $("#start").on("click",function(event) {
+                    socket.emit("start");
+                });
                 socket.on("update", function(msg) {
                         $("#log").append(msg.data + "<br />");
                     });
-                $("#start").on("click",function(event) {
-                    socket.emit("start");
-
-                });
-
                 $("#clear").on("click",function (){
                         $("#log").empty();
 
                 })
-
                 $("input[name='stop']").on("click", function() {
                     socketio.emit("stop");
                     socketio.on("update", function(msg) {
@@ -84,4 +86,3 @@
 
     {% endblock %}
 
-{% endblock %}
