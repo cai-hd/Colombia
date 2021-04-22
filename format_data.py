@@ -1,5 +1,3 @@
-import datetime
-
 import eventlet
 eventlet.monkey_patch()
 
@@ -9,6 +7,10 @@ from flask_socketio import SocketIO, emit
 from flask_redis import FlaskRedis
 from utils import merge_pod, merge_node
 from main import check
+from threading import Lock
+
+thread = None
+thread_lock = Lock()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dshkwnds'
@@ -25,12 +27,12 @@ def listener(channels):
             msg = item['data']
             if isinstance(msg, bytes):
                 msg = item['data'].decode('utf-8')
-                emit("update", {'data': msg}, namespace="/work", broadcast=True, include_self=True)
+                emit("update", {'data': msg}, namespace="/work", broadcast=True)
 
 
 @app.before_request
 def before_request():
-    if redis.get("report") is None and request.endpoint != 'recheck':
+    if redis.get("report") is None and request.endpoint not in ('recheck', 'static'):
         return redirect(url_for("recheck"))
     elif redis.get("report"):
         report = redis.get('report')
@@ -83,10 +85,18 @@ def connect():
     emit("update", {"data": "connected"})
 
 
+
+
 @socket_io.on('start', namespace='/work')
 def start_work():
-    emit("update", {"data": "starting worker"})
-    socket_io.start_background_task(target=check)
+    global thread
+    with thread_lock:
+        if thread is None:
+            emit("update", {"data": "starting worker"})
+            thread = socket_io.start_background_task(target=check)
+        else:
+            emit("update", {"data": "Check thread is working ......"})
+
 
 
 if __name__ == "__main__":

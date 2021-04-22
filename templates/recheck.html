@@ -2,7 +2,10 @@
 
 {% block head %}
     {{ super() }}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.mCustomScrollbar.min.css">
     <script type="text/javascript" src="/static/js/socket.io.min.js"></script>
+        <script type="text/javascript" src="/static/js/jquery.mCustomScrollbar.concat.min.js"></script>
+
 {% endblock %}
 {% block styles %}
     <style>
@@ -19,6 +22,9 @@
             background-color: black;
             border: 1px solid #ccc;
             border-radius: 4px;
+            height: auto;
+            max-height: 800px;
+            overflow-y: scroll;
         }
     </style>
 
@@ -49,10 +55,12 @@
             </div>
 
             <div>
-          <pre>
-                 <span>{{ get_flashed_messages()[0] }}</span>
-                 <p id="log"> </p>
-          </pre>
+                <div id="c1">
+                    <pre>
+                         <span>{{ get_flashed_messages()[0] }}</span>
+                        <p id="log"> </p>
+                    </pre>
+                </div>
             </div>
         </div>
     </div>
@@ -62,24 +70,26 @@
     {% block scripts %}
         <script type="text/javascript">
             $(document).ready(function() {
+              var elem = document.getElementById('log');
+             elem.scrollTop = elem.scrollHeight;
+
+
+
                 var namespace = "/work"
                 var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
                 $("#start").on("click",function(event) {
                     socket.emit("start");
                 });
                 socket.on("update", function(msg) {
+
                         $("#log").append(msg.data + "<br />");
+
                     });
                 $("#clear").on("click",function (){
                         $("#log").empty();
 
                 })
-                $("input[name='stop']").on("click", function() {
-                    socketio.emit("stop");
-                    socketio.on("update", function(msg) {
-                        $("#log").append(msg.data + "<br />");
-                    });
-                });
+
             });
         </script>
 
