@@ -1,4 +1,5 @@
 import eventlet
+
 eventlet.monkey_patch()
 
 import pickle
@@ -88,9 +89,6 @@ def connect():
         emit("update", {"data": "Check thread is working ......"})
 
 
-
-
-
 @socket_io.on('start', namespace='/work')
 def start_work():
     global thread
@@ -100,7 +98,6 @@ def start_work():
             thread = socket_io.start_background_task(target=check)
         elif thread.is_alive():
             emit("update", {"data": "Check thread is working ......"})
-
 
 
 if __name__ == "__main__":
