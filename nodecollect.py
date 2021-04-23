@@ -158,7 +158,7 @@ c
         for i in dnslist:
             d = {}
             d["dnsname"] = i
-            cmd = "host {}".format(i)
+            cmd = "which host || yum -y -q  install  bind-utils;host {}".format(i)
             r = self.execute_commands(cmd)
             if isinstance(r, list):
                 d["checkpass"] = True
@@ -453,9 +453,9 @@ c
         return check_data
 
 
-def checknode(ip: str, key_filepath: str = '/root/.ssh/id_rsa', **kwargs):
+def checknode(ip: str, ssh_user:str,ssh_port:int,ssh_pass:str,ssh_key:str):
     c = {}
-    n = nodecheck(host=ip, ssh_key_filepath=key_filepath, **kwargs)
+    n = nodecheck(ip, ssh_user,ssh_port,ssh_pass,ssh_key)
     for i in [
         "docker",
         "load",
@@ -482,21 +482,24 @@ def callback(msg):
 
 
 def get_result():
-    check_result = []
+    check_result = dict()
     while not q.empty():
         i = q.get()
-        check_result.append(i)
-    return {"result": check_result}
+        check_result.update(i)
+    return check_result
 
 
 def checkAllNodes(nodes: []):
     p = Pool(processes=8)
     for i in nodes:
+        ip=i[0]
+        user=i[1]
+        port=i[2]
+        pwd=i[3]
+        key=i[4]
         p.apply_async(
             func=checknode,
-            args=(
-                i,
-                "./secret/id_rsa"),
+            args=(ip,user,port,pwd,key),
             callback=callback)
     p.close()
     p.join()
