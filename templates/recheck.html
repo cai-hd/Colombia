@@ -75,8 +75,18 @@
                     socket.emit("start");
                 });
                 socket.on("update", function(msg) {
-                    $("#log").append(msg.data + "<br />");
-                    var textarea = document.getElementById('log');
+                    var data = msg.data;
+
+                    if(data.includes("ERROR")){
+                        $("#log").append("<p class='badge-danger'>" + data + "</p>");}
+                    else if( data.includes("completed")){
+                            $("#log").append("<p class='badge-success'>" + data +"</p>");
+                        }
+                    else {
+                        $("#log").append("<p>" + data +"</p>");
+
+                    }
+                        var textarea = document.getElementById('log');
                      textarea.scrollTop = textarea.scrollHeight;
                  });
                 $("#clear").on("click",function (){
