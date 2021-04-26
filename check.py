@@ -24,7 +24,7 @@ from kubernetes.stream import stream
 from clusters import K8sClusters, Cluster
 from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
-from nodecollect import nodecheck,run
+from nodecollect import nodecheck, AllRun
 
 
 class CheckGlobal(K8sClusters):
@@ -188,24 +188,30 @@ class CheckGlobal(K8sClusters):
     def check_node_info(self):
         for cluster in self.clusters.keys():
             self.checkout[cluster]['node_info'] = dict()
-        nodes_list=list()
+        nodes_list = list()
         for machine in self.machines.keys():
             # logger.info(f"check node {machine} info")
-            n=[]
-            n.insert(0,machine)
+            n = []
+            n.insert(0, machine)
             cluster = self.machines[machine]['spec']['cluster']
             if cluster:
                 user = self.machines[machine]['spec']['auth']['user']
                 ssh_port = int(self.machines[machine]['spec']['sshPort'])
                 pwd = self.machines[machine]['spec']['auth']['password']
                 key = self.machines[machine]['spec']['auth']['key']
-                n.insert(1,user)
-                n.insert(2,ssh_port)
-                n.insert(3,pwd)
-                n.insert(4,key)
+                n.insert(1, user)
+                n.insert(2, ssh_port)
+                n.insert(3, pwd)
+                n.insert(4, key)
+                n.insert(5, cluster)
             nodes_list.append(n)
-        r=run(nodes_list)
-        self.checkout[cluster]['node_info'].update(r)
+        a = AllRun(nodes_list)
+        a.concurrent_run()
+        r = a.get_result()
+        for i in r:
+            for k, v in i.items():
+                self.checkout[k]['node_info'].update(v)
+
     # ssh_obj = nodecheck(machine, user, ssh_port, pwd, key)
     # self.checkout[cluster]['node_info'][machine] = ssh_obj.start_check()
     # ssh_obj.close()
@@ -292,10 +298,10 @@ class CheckK8s(Cluster):
 
         physical_mem_total = parse_resource(clusters['system']['status']['physical']['capacity']['memory'])
         physical_mem_unused = parse_resource(clusters['system']['status']['physical']['allocatable']['memory'])
-        physical_mem_used = "{:.2f}Gi".format((physical_mem_total - physical_mem_unused)/ONE_GIBI)
+        physical_mem_used = "{:.2f}Gi".format((physical_mem_total - physical_mem_unused) / ONE_GIBI)
         physical_mem_status = True if physical_mem_unused > physical_mem_total * 0.2 else False
-        physical_mem_unused = "{:.2f}Gi".format(physical_mem_unused/ONE_GIBI)
-        physical_mem_total = "{:.2f}Gi".format(physical_mem_total/ONE_GIBI)
+        physical_mem_unused = "{:.2f}Gi".format(physical_mem_unused / ONE_GIBI)
+        physical_mem_total = "{:.2f}Gi".format(physical_mem_total / ONE_GIBI)
 
         logical_cpu_request_total = parse_resource(clusters['system']['status']['logical']['total']['requests.cpu'])
         logical_cpu_request_used = parse_resource(clusters['system']['status']['logical']['allocated']['requests.cpu'])
@@ -310,15 +316,17 @@ class CheckK8s(Cluster):
         logical_cpu_limit_used = "{:.2f}".format(logical_cpu_limit_used)
 
         logical_mem_request_total = parse_resource(clusters['system']['status']['logical']['total']['requests.memory'])
-        logical_mem_request_used = parse_resource(clusters['system']['status']['logical']['allocated']['requests.memory'])
-        logical_mem_request_unused = "{:.2f}Gi".format((logical_mem_request_total - logical_mem_request_used)/ONE_GIBI)
+        logical_mem_request_used = parse_resource(
+            clusters['system']['status']['logical']['allocated']['requests.memory'])
+        logical_mem_request_unused = "{:.2f}Gi".format(
+            (logical_mem_request_total - logical_mem_request_used) / ONE_GIBI)
         logical_mem_request_status = True if logical_mem_request_used < logical_mem_request_total * 0.8 else False
         logical_mem_request_total = "{:.2f}Gi".format(logical_mem_request_total / ONE_GIBI)
         logical_mem_request_used = "{:.2f}Gi".format(logical_mem_request_used / ONE_GIBI)
 
         logical_mem_limit_total = parse_resource(clusters['system']['status']['logical']['total']['limits.memory'])
         logical_mem_limit_used = parse_resource(clusters['system']['status']['logical']['allocated']['limits.memory'])
-        logical_mem_limit_unused = "{:.2f}Gi".format((logical_mem_limit_total - logical_mem_limit_used)/ONE_GIBI)
+        logical_mem_limit_unused = "{:.2f}Gi".format((logical_mem_limit_total - logical_mem_limit_used) / ONE_GIBI)
         logical_mem_limit_status = True if logical_mem_limit_used < logical_mem_limit_total * 0.8 else False
         logical_mem_limit_total = "{:.2f}Gi".format(logical_mem_limit_total / ONE_GIBI)
         logical_mem_limit_used = "{:.2f}Gi".format(logical_mem_limit_used / ONE_GIBI)
@@ -351,7 +359,7 @@ class CheckK8s(Cluster):
 
             mem_request_total = parse_resource(objs[key]['status']['hard']['requests.memory'])
             mem_request_used = parse_resource(objs[key]['status']['used']['requests.memory'])
-            mem_request_unused = "{:.2f}".format((mem_request_total - mem_request_used)/ONE_GIBI)
+            mem_request_unused = "{:.2f}".format((mem_request_total - mem_request_used) / ONE_GIBI)
             mem_request_status = True if mem_request_used < mem_request_total * 0.8 else False
             mem_request_total = "{:.2f}Gi".format(mem_request_total / ONE_GIBI)
             mem_request_used = "{:.2f}Gi".format(mem_request_used / ONE_GIBI)
@@ -364,7 +372,7 @@ class CheckK8s(Cluster):
 
             mem_limit_total = parse_resource(objs[key]['status']['hard']['limits.memory'])
             mem_limit_used = parse_resource(objs[key]['status']['used']['limits.memory'])
-            mem_limit_unused = "{:.2f}".format((mem_limit_total - mem_limit_used)/ONE_GIBI)
+            mem_limit_unused = "{:.2f}".format((mem_limit_total - mem_limit_used) / ONE_GIBI)
             mem_limit_status = True if mem_limit_used < mem_limit_total * 0.8 else False
             mem_limit_total = "{:.2f}Gi".format(mem_limit_total / ONE_GIBI)
             mem_limit_used = "{:.2f}Gi".format(mem_limit_used / ONE_GIBI)
