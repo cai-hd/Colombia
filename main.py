@@ -34,7 +34,7 @@ def check():
     r.set("report", dump)
     logger.info("report save to redis has been completed")
     end = start - time.time()
-    logger.info("this task took %s seconds".format(str(end)))
+    logger.info("this task took {} seconds".format(str(end)))
     return True
 
 
