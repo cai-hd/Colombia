@@ -7,14 +7,14 @@
 @software: PyCharm
 """
 
-from multiprocessing import Pool, Queue
+# from multiprocessing import Pool, Queue
 from utils import RemoteClientCompass, config_obj
 from collections import defaultdict
 import re
 from concurrent.futures import ThreadPoolExecutor
 
 # q = Queue()
-
+AllResult = list()
 
 def strstrip(a: str) -> str:
     return a.replace('\n', '').replace('\r', '')
@@ -457,13 +457,13 @@ c
 class AllRun(object):
     def __init__(self,ssh_objs,max_worker=10):
         self.ssh_objs=ssh_objs
-        self.max_workers=max_worker
+        self.max_worker=max_worker
 
     def single_exec(self,obj):
-        ip,ssh_user,ssh_port,ssh_pass,ssh_key=obj
+        ip,ssh_user,ssh_port,ssh_pass,ssh_key,cluster=obj
         n = nodecheck(ip, ssh_user, ssh_port, ssh_pass, ssh_key)
         r=n.start_check()
-        return {ip:r}
+        return {cluster:{ip:r}}
 
     def concurrent_run(self):
         f = ThreadPoolExecutor(self.max_worker)
@@ -475,10 +475,8 @@ class AllRun(object):
         f.shutdown(wait=True)
 
     def callback(self,ssh_result):
-        global AllResult
-        AllResult=dict()
         sr=ssh_result.result()
-        AllResult.update(sr)
+        AllResult.append(sr)
 
     def get_result(self):
         return AllResult

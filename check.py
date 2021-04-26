@@ -203,11 +203,14 @@ class CheckGlobal(K8sClusters):
                 n.insert(2,ssh_port)
                 n.insert(3,pwd)
                 n.insert(4,key)
+                n.insert(5,cluster)
             nodes_list.append(n)
         a=AllRun(nodes_list)
         a.concurrent_run()
         r=a.get_result()
-        self.checkout[cluster]['node_info'].update(r)
+        for i in r:
+            for k,v in i.items():
+                self.checkout[k]['node_info'].update(v)
     # ssh_obj = nodecheck(machine, user, ssh_port, pwd, key)
     # self.checkout[cluster]['node_info'][machine] = ssh_obj.start_check()
     # ssh_obj.close()
