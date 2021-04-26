@@ -124,7 +124,7 @@ class RemoteClientCompass(object):
         if status == 0:
             response = stdout.readlines()
             for line in response:
-                logger.info(f'INPUT: {commands} | OUTPUT: {line}')
+                logger.debug(f'INPUT: {commands} | OUTPUT: {line}')
             return response
         else:
             error_msg = stderr.read().decode()

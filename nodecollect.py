@@ -7,13 +7,14 @@
 @software: PyCharm
 """
 
-# from multiprocessing import Pool, Queue
-from utils import RemoteClientCompass, config_obj
-from collections import defaultdict
 import re
+import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
-# q = Queue()
+from log import logger
+from utils import RemoteClientCompass, config_obj
+
 AllResult = list()
 
 
@@ -463,7 +464,11 @@ class AllRun(object):
     def single_exec(self, obj):
         ip, ssh_user, ssh_port, ssh_pass, ssh_key, cluster = obj
         n = nodecheck(ip, ssh_user, ssh_port, ssh_pass, ssh_key)
+        logger.info('start check {} node {}'.format(cluster, ip))
+        start = time.time()
         r = n.start_check()
+        end = time.time() - start
+        logger.info('{} node {} check completed, task took {} seconds'.format(cluster, ip, round(end)))
         return {cluster: {ip: r}}
 
     def concurrent_run(self):
@@ -472,7 +477,7 @@ class AllRun(object):
             try:
                 f.submit(self.single_exec, s).add_done_callback(self.callback)
             except Exception as err:
-                print(err)
+                logger.error(err)
         f.shutdown(wait=True)
 
     def callback(self, ssh_result):
