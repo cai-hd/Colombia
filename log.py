@@ -40,9 +40,10 @@ def create_logger():
         colorize=False,
         level="INFO",
         catch=True,
-        format="<light-cyan>{time:MM-DD-YYYY HH:mm:ss}</light-cyan> | \
-            <light-green>{function}</light-green> | \
-    		<light-red>{level}</light-red>: \
+        format="<light-cyan>{time:MM-DD-YYYY HH:mm:ss}</light-cyan>\
+            <light-green>{function}</light-green>\
+    		<light-red>{level}</light-red>\
+            <light-green>{function}</light-green>\
     		<light-white>{message}</light-white>")
     return custom_logger
 
