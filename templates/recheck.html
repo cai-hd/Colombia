@@ -82,8 +82,11 @@
                     else if( data.includes("completed")){
                             $("#log").append("<p style='color: green' '>" + data +"</p>");
                         }
-                    else {
-                        $("#log").append("<p>" + data +"</p>");
+                    else if(data.includes("working")){
+                        $("#log").append("<p style='color: yellow' " + data +"</p>");
+                    }else{
+                       $("#log").append("<p>" + data +"</p>");
+
                     }
                         var textarea = document.getElementById('log');
                      textarea.scrollTop = textarea.scrollHeight;
