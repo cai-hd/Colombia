@@ -78,13 +78,12 @@
                     var data = msg.data;
 
                     if(data.includes("ERROR")){
-                        $("#log").append("<p class='badge-danger'>" + data + "</p>");}
+                        $("#log").append("<p style='color: red'>" + data + "</p>");}
                     else if( data.includes("completed")){
-                            $("#log").append("<p class='badge-success'>" + data +"</p>");
+                            $("#log").append("<p style='color: green' '>" + data +"</p>");
                         }
                     else {
                         $("#log").append("<p>" + data +"</p>");
-
                     }
                         var textarea = document.getElementById('log');
                      textarea.scrollTop = textarea.scrollHeight;
