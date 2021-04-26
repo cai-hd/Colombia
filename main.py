@@ -5,9 +5,11 @@ from pathlib import Path
 import pickle
 from log import logger
 from redis import Redis
+import time
 
 @logger.catch
 def check():
+    start = time.time()
     control_k8s = CheckGlobal()
     busybox_images = control_k8s.load_busybox_image()
     control_k8s.start_check()
@@ -31,6 +33,8 @@ def check():
     dump = pickle.dumps(check_out)
     r.set("report", dump)
     logger.info("report save to redis has been completed")
+    end = start - time.time()
+    logger.info("this task took %s seconds".format(str(end)))
     return True
 
 
