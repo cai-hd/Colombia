@@ -33,8 +33,8 @@ def check():
     dump = pickle.dumps(check_out)
     r.set("report", dump)
     logger.info("report save to redis has been completed")
-    end = start - time.time()
-    logger.info("this task took {} seconds".format(str(end)))
+    end = time.time() - start
+    logger.info("this task took {} seconds".format(round(end, 4)))
     return True
 
 
