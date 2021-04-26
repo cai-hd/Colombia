@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 # q = Queue()
 AllResult = list()
 
+
 def strstrip(a: str) -> str:
     return a.replace('\n', '').replace('\r', '')
 
@@ -455,15 +456,15 @@ c
 
 
 class AllRun(object):
-    def __init__(self,ssh_objs,max_worker=10):
-        self.ssh_objs=ssh_objs
-        self.max_worker=max_worker
+    def __init__(self, ssh_objs, max_worker=10):
+        self.ssh_objs = ssh_objs
+        self.max_worker = max_worker
 
-    def single_exec(self,obj):
-        ip,ssh_user,ssh_port,ssh_pass,ssh_key,cluster=obj
+    def single_exec(self, obj):
+        ip, ssh_user, ssh_port, ssh_pass, ssh_key, cluster = obj
         n = nodecheck(ip, ssh_user, ssh_port, ssh_pass, ssh_key)
-        r=n.start_check()
-        return {cluster:{ip:r}}
+        r = n.start_check()
+        return {cluster: {ip: r}}
 
     def concurrent_run(self):
         f = ThreadPoolExecutor(self.max_worker)
@@ -474,8 +475,8 @@ class AllRun(object):
                 print(err)
         f.shutdown(wait=True)
 
-    def callback(self,ssh_result):
-        sr=ssh_result.result()
+    def callback(self, ssh_result):
+        sr = ssh_result.result()
         AllResult.append(sr)
 
     def get_result(self):
