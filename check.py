@@ -24,7 +24,7 @@ from kubernetes.stream import stream
 from clusters import K8sClusters, Cluster
 from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
-from nodecollect import nodecheck,run
+from nodecollect import nodecheck,AllRun
 
 
 class CheckGlobal(K8sClusters):
@@ -204,7 +204,9 @@ class CheckGlobal(K8sClusters):
                 n.insert(3,pwd)
                 n.insert(4,key)
             nodes_list.append(n)
-        r=run(nodes_list)
+        a=AllRun(nodes_list)
+        a.concurrent_run()
+        r=a.get_result()
         self.checkout[cluster]['node_info'].update(r)
     # ssh_obj = nodecheck(machine, user, ssh_port, pwd, key)
     # self.checkout[cluster]['node_info'][machine] = ssh_obj.start_check()

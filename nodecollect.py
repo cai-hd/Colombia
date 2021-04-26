@@ -11,8 +11,9 @@ from multiprocessing import Pool, Queue
 from utils import RemoteClientCompass, config_obj
 from collections import defaultdict
 import re
+from concurrent.futures import ThreadPoolExecutor
 
-q = Queue()
+# q = Queue()
 
 
 def strstrip(a: str) -> str:
@@ -453,62 +454,91 @@ c
         return check_data
 
 
-def checknode(ip: str, ssh_user:str,ssh_port:int,ssh_pass:str,ssh_key:str):
-    c = {}
-    n = nodecheck(ip, ssh_user,ssh_port,ssh_pass,ssh_key)
-    for i in [
-        "docker",
-        "load",
-        "contrack",
-        "openfile",
-        "pid",
-        "dns",
-        "diskIO",
-        "diskUsage",
-        "nic",
-        "zprocess",
-        "ntp",
-        "containerd",
-        "kubelet",
-        "kubeproxy"]:
-        m = getattr(n, "get_{}".format(i))
-        r = m()
-        c.update(r)
-    return {ip: c}
+class AllRun(object):
+    def __init__(self,ssh_objs,max_worker=10):
+        self.ssh_objs=ssh_objs
+        self.max_workers=max_worker
 
+    def single_exec(self,obj):
+        ip,ssh_user,ssh_port,ssh_pass,ssh_key=obj
+        n = nodecheck(ip, ssh_user, ssh_port, ssh_pass, ssh_key)
+        r=n.start_check()
+        return {ip:r}
 
-def callback(msg):
-    q.put(msg)
+    def concurrent_run(self):
+        f = ThreadPoolExecutor(self.max_worker)
+        for s in self.ssh_objs:
+            try:
+                f.submit(self.single_exec, s).add_done_callback(self.callback)
+            except Exception as err:
+                print(err)
+        f.shutdown(wait=True)
 
+    def callback(self,ssh_result):
+        global AllResult
+        AllResult=dict()
+        sr=ssh_result.result()
+        AllResult.update(sr)
 
-def get_result():
-    check_result = dict()
-    while not q.empty():
-        i = q.get()
-        check_result.update(i)
-    return check_result
+    def get_result(self):
+        return AllResult
 
-
-def checkAllNodes(nodes: []):
-    p = Pool(processes=8)
-    for i in nodes:
-        ip=i[0]
-        user=i[1]
-        port=i[2]
-        pwd=i[3]
-        key=i[4]
-        p.apply_async(
-            func=checknode,
-            args=(ip,user,port,pwd,key),
-            callback=callback)
-    p.close()
-    p.join()
-
-
-def run(nodes: []):
-    checkAllNodes(nodes)
-    results = get_result()
-    return results
+# def checknode(ip: str, ssh_user:str,ssh_port:int,ssh_pass:str,ssh_key:str):
+#     c = {}
+#     n = nodecheck(ip, ssh_user,ssh_port,ssh_pass,ssh_key)
+#     for i in [
+#         "docker",
+#         "load",
+#         "contrack",
+#         "openfile",
+#         "pid",
+#         "dns",
+#         "diskIO",
+#         "diskUsage",
+#         "nic",
+#         "zprocess",
+#         "ntp",
+#         "containerd",
+#         "kubelet",
+#         "kubeproxy"]:
+#         m = getattr(n, "get_{}".format(i))
+#         r = m()
+#         c.update(r)
+#     return {ip: c}
+#
+#
+# def callback(msg):
+#     q.put(msg)
+#
+#
+# def get_result():
+#     check_result = dict()
+#     while not q.empty():
+#         i = q.get()
+#         check_result.update(i)
+#     return check_result
+#
+#
+# def checkAllNodes(nodes: []):
+#     p = Pool(processes=8)
+#     for i in nodes:
+#         ip=i[0]
+#         user=i[1]
+#         port=i[2]
+#         pwd=i[3]
+#         key=i[4]
+#         p.apply_async(
+#             func=checknode,
+#             args=(ip,user,port,pwd,key),
+#             callback=callback)
+#     p.close()
+#     p.join()
+#
+#
+# def run(nodes: []):
+#     checkAllNodes(nodes)
+#     results = get_result()
+#     return results
 
 
 # if __name__ == '__main__':
