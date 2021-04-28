@@ -6,9 +6,11 @@ import pickle
 from log import logger
 from redis import Redis
 import time
+from typing import Dict
+
 
 @logger.catch
-def check():
+def check() -> Dict:
     start = time.time()
     control_k8s = CheckGlobal()
     busybox_images = control_k8s.load_busybox_image()
@@ -24,7 +26,7 @@ def check():
         k8s = K8sClient(conf)
         now = datetime.datetime.now()
         context = {}
-        for i in ["node", "pod", "job", "metric"]:
+        for i in ["node", "pod",  "metric"]:
             context_method = getattr(k8s, "get_{}".format(i))
             context[i] = context_method()
             context['now'] = now
@@ -34,7 +36,7 @@ def check():
     r.set("report", dump)
     logger.info("report save to redis has been completed")
     end = time.time() - start
-    logger.info("this task took {} seconds".format(round(end, 4)))
+    logger.info("this task took {} seconds".format(round(end, 2)))
     return True
 
 

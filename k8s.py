@@ -94,32 +94,7 @@ class K8sClient(Cluster):
         return PodMetric(ns=ns, pod=pod.metadata.name, status=status, cpu=cpu, memory=memory,
                          **self.aggregate_container_resource(pod))
 
-    def get_job(self):
-        api_instance = self.batch_v1_api
-        jobs = api_instance.list_job_for_all_namespaces()
-        jobs_status = []
-        for i in jobs.items:
-            name = i.metadata.name
-            ns = i.metadata.namespace
-            start = i.status.start_time
-            if i.status.succeeded == 1:
-                status = "success"
-            elif i.status.failed == 1:
-                status = "failed"
-            else:
-                status = "active"
-            jobs_status.append({"ns": ns, "name": name, "start": start, "status": status})
-        return {"desc": "jobs", "result": jobs_status}
-
-    def get_core(self):
-        api_instance = self.core_v1_api
-        component = api_instance.list_component_status()
-        component_list = []
-        for i in component.items:
-            status = "Ready" if i.conditions[0].status else "NotReady"
-            component_list.append({"status": status, "name": i.metadata.name})
-        return {"desc": "component", "result": component_list}
-
+    @logger.catch
     def get_node(self):
         api_instance = self.core_v1_api
         nodes = api_instance.list_node()

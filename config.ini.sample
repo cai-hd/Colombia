@@ -25,3 +25,6 @@ harbor_pwd = Pwd123456
 
 [cmd]
 
+
+[redis]
+host = localhost
