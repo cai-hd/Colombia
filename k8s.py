@@ -42,9 +42,9 @@ class K8sClient(Cluster):
         custom = self.custom_api
         data = custom.get_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes", node)
         node = data['metadata']['name']
-        cpu = parse_resource(data['usage']['cpu'])
-        memory = parse_resource(data['usage']['memory'])
-        return NodeMetric(node=node, cpu=cpu, memory=memory / ONE_GIBI)
+        cpu = round(parse_resource(data['usage']['cpu']), 3)
+        memory = f"{round(parse_resource(data['usage']['memory']) / ONE_GIBI, 3)}Gi"
+        return NodeMetric(node=node, cpu=cpu, memory=memory)
 
     @logger.catch
     def top_pods(self):
@@ -74,12 +74,16 @@ class K8sClient(Cluster):
         for container in pod.spec.containers:
             limits = getattr(container.resources, 'limits', None)
             if limits:
-                values['memory_limits'] += round(parse_resource(limits.get('memory')) / ONE_GIBI, 1)
-                values['cpu_limits'] += parse_resource(limits.get('cpu'))
+                values['memory_limits'] += round(parse_resource(limits.get('memory')) / ONE_GIBI, 3)
+                values['cpu_limits'] += round(parse_resource(limits.get('cpu')), 3)
             requests = getattr(container.resources, 'requests', None)
             if requests:
-                values['memory_requests'] += round(parse_resource(requests.get('memory')) / ONE_GIBI, 1)
-                values['cpu_requests'] += parse_resource(requests.get('cpu'))
+                values['memory_requests'] += round(parse_resource(requests.get('memory')) / ONE_GIBI, 3)
+                values['cpu_requests'] += round(parse_resource(requests.get('cpu')), 3)
+        values['cpu_limits'] = round(values['cpu_limits'], 3)
+        values['cpu_requests'] = round(values['cpu_requests'], 3)
+        values['memory_limits'] = f"{round(values['memory_limits'], 3)}Gi"
+        values['memory_requests'] = f"{round(values['memory_requests'], 3)}Gi"
         return values
 
     @logger.catch
@@ -88,7 +92,7 @@ class K8sClient(Cluster):
         status = pod.status.phase
         data = self.top_pods().get(pod.metadata.name) or []
         cpu = round(sum(pod_data['cpu'] for pod_data in data), 3)
-        memory = round(sum(pod_data['memory'] for pod_data in data))
+        memory = f"{round(sum(pod_data['memory'] for pod_data in data), 3)}Mi"
         return PodMetric(ns=ns, pod=pod.metadata.name, status=status, cpu=cpu, memory=memory,
                          **self.aggregate_container_resource(pod))
 
@@ -107,7 +111,7 @@ class K8sClient(Cluster):
             node['kernel'] = i.status.node_info.kernel_version
             node['container_runtime'] = i.status.node_info.container_runtime_version
             node['cpu'] = i.status.capacity['cpu']
-            node['memory'] = round(parse_resource(i.status.capacity['memory']) / ONE_GIBI)
+            node['memory'] = f"{round(parse_resource(i.status.capacity['memory']) / ONE_GIBI, 3)}Gi"
             result.append(node)
         return {"desc": "node", "result": result}
 
