@@ -1,8 +1,6 @@
 import collections
 import urllib3
-
 import jsonpath
-
 from clusters import Cluster
 from log import logger
 from utils import parse_resource, ONE_GIBI, ONE_MEBI
@@ -126,7 +124,7 @@ class K8sClient(Cluster):
                 pod['restart'] = max([x.restart_count for x in i.status.container_statuses])
             else:
                 pod['restart'] = None
-            pod['start_time'] = i.status.start_time
+            pod['start_time'] = f'{i.status.start_time:%Y-%m-%d %H:%M:%S }'
             pod['ip'] = i.status.pod_ip
             pod['host'] = i.status.host_ip
             result.append(pod)

@@ -297,27 +297,82 @@
           <td>{{ v['contrack']['contrack_used'] }}</td>
           <td>{{ v['openfile']['openfile_used'] }}</td>
           <td>{{ v['pid']['pid_used'] }}</td>
-          <td>1</td>
-          <td>1</td>
+          <td>{%  for d in v['dns'] %}
+
+               {%  for k,v in d.items() %}
+                    {%  if k == 'dnsname'  %}
+                      <span>{{ v }}</span>
+                     {% elif k == 'result' and v | length > 0 %}
+                        <span style="color: red">{{ v }}</span>
+                   {% endif %}
+                      {% endfor %}
+          {% endfor %}
+              </td>
+          <td>
+              {%  for i in v['diskio'] %}
+                  {% for k,v in i.items() %}
+                      {%  if k == "device"  %}
+                         {{ v }}
+                       {% elif  v['isNormal']  %}
+                           <span style="color: green">OK</span>
+                       {% elif  v['isNormal']  == false %}
+                           <span style="color: yellow">Waring</span>
+                        {% endif %}
+                      {% endfor %}
+                  {% endfor %}
+          </td>
           <td>
             {% for r in v['diskusage'] %}
+
                 {%  for a,v in r.items() %}
                      {{ v }}
                     {% endfor %}
+                <br>
                 {% endfor %}
           </td>
-            <td>1</td>
-            <td>{{  v['zprocess']['checkpass'] }}</td>
-            <td>{{  v['ntp']['checkpass'] }}</td>
-            <td>{{ v['containerd']['checkpass'] }}</td>
+            <td>
+                {%  for i in v['nicio'] %}
+                  {% for k,v in i.items() %}
+                      {%  if k == "device"  %}
+                         {{ v }}
+                       {% elif  v['isNormal']  %}
+                           <span style="color: green">OK</span>
+                       {% elif  v['isNormal']  == false %}
+                           <span style="color: yellow">Waring</span>
+                        {% endif %}
+                      {% endfor %}
+                  {% endfor %}
+            </td>
+            <td>{% if  v['zprocess']['checkpass']  %}
+                     <span style="color:green">OK</span>
+                {% else %}
+                      <span style="color:red">v['zprocess']['result']</span>
+                {% endif %}
+              </td>
+            <td>{% if  v['ntp']['checkpass']  %}
+                 <span style="color: green">OK</span>
+            {% else %}
+                 <span style="color: red">v['ntp']['result'</span>
+                {% endif %}
+            </td>
+            <td>{% if v['containerd']['checkpass'] %}
+                <span style="color:green">OK</span>
+                {% else %}
+                <span style="color: red">v['containerd']['result'] </span>
+                {% endif %}
+            </td>
             <td>{{ v['kubelet']['process'] }}</td>
-              <td>{{ v['kubeproxy']['porthealth'] }}</td>
+              <td>{% if v['kubeproxy']['porthealth']  %}
+                   <span style="color:green">OK</span>
+                {% else %}
+                <span style="color: red">ERROR </span>
+                {% endif %}
+              </td>
               <td>{{ v['container_runtime'] }}</td>
               <td>{{ v['status'] }}</td>
               <td>{{ v['kernel'] }}</td>
               <td>{{ v['cpu']}} / {{   v['memory']  }}</td>
-              <td>{{ v['cpu_usage']}} / {{   v['mem_usage']  }}</td>
-
+              <td>{{ v['cpu_usage']}} /  {{v['mem_usage'] |round(2) }}</td>
           </tr>
         {% endfor %}
         </tbody>

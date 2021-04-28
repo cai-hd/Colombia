@@ -1,7 +1,5 @@
 import eventlet
-
 eventlet.monkey_patch()
-
 import pickle
 from flask import Flask, render_template, request, redirect, url_for, g, flash
 from flask_socketio import SocketIO, emit
@@ -47,6 +45,7 @@ def index():
     cid = 'compass-stack'
     g.data[cid]['node_info'] = merge_node(g.data, cid)
     g.data[cid]['pod_info'] = merge_pod(g.data, cid)
+    print(g.data[cid]['node_info'])
     return render_template("index.html", nav=g.nav, data=g.data[cid])
 
 
