@@ -235,11 +235,11 @@
                <th>{{i['ip']}}</th>
                <th>{{i['host']}}</th>
                <th>{{ i['cpu'] }}</th>
-               <th>{{ i['cpu_requests'] }}</th>
-               <th>{{ i['cpu_limits'] }}</th>
-               <th>{{ i['memory'] }}</th>
-               <th>{{ i['memory_requests'] }}</th>
-               <th>{{ i['memory_limits'] }}</th>
+               <th>{{ i['cpu_requests'] | round(2) }} </th>
+               <th>{{ i['cpu_limits'] | round(2)  }}</th>
+               <th>{{ i['memory'] | round(2) }}</th>
+               <th>{{ i['memory_requests'] | round(2)  }}</th>
+               <th>{{ i['memory_limits'] | round(2)  }}</th>
              </tr>
         {% endfor %}
         </tbody>
