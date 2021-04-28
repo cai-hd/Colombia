@@ -346,19 +346,19 @@
             <td>{% if  v['zprocess']['checkpass']  %}
                      <span style="color:green">OK</span>
                 {% else %}
-                      <span style="color:red">v['zprocess']['result']</span>
+                      <span style="color:red">{{ v['zprocess']['result'] }}</span>
                 {% endif %}
               </td>
             <td>{% if  v['ntp']['checkpass']  %}
                  <span style="color: green">OK</span>
             {% else %}
-                 <span style="color: red">v['ntp']['result'</span>
+                 <span style="color: red">{{ v['ntp']['result'] }}</span>
                 {% endif %}
             </td>
             <td>{% if v['containerd']['checkpass'] %}
                 <span style="color:green">OK</span>
                 {% else %}
-                <span style="color: red">v['containerd']['result'] </span>
+                <span style="color: red">{{ v['containerd']['result'] }}</span>
                 {% endif %}
             </td>
             <td>{{ v['kubelet']['process'] }}</td>
