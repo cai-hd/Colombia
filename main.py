@@ -13,6 +13,7 @@ from typing import Dict
 def check() -> Dict:
     start = time.time()
     control_k8s = CheckGlobal()
+    alias = control_k8s.get_name_alias()
     busybox_images = control_k8s.load_busybox_image()
     control_k8s.start_check()
     check_out = control_k8s.checkout
@@ -26,19 +27,22 @@ def check() -> Dict:
         k8s = K8sClient(conf)
         now = datetime.datetime.now()
         context = {}
-        for i in ["node", "pod",  "metric"]:
+        for i in ["node", "pod", "metric"]:
             context_method = getattr(k8s, "get_{}".format(i))
             context[i] = context_method()
             context['now'] = now
         check_out[cluster_name]['context'] = context
-    r = Redis("localhost")
+    for i in alias.keys():
+        check_out[alias[i]] = check_out[i]
+        del check_out[i]
     dump = pickle.dumps(check_out)
+    f = open(f'./tmp/dump-{time.strftime("%Y%m%d", time.localtime())}', 'wb')
+    pickle.dump(check_out, f)
+    f.close()
+    r = Redis("localhost")
     r.set("report", dump)
     logger.info("report save to redis has been completed")
     end = time.time() - start
     logger.info("this task took {} seconds".format(round(end, 2)))
     return True
-
-
-
 

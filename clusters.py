@@ -152,3 +152,8 @@ class Cluster:
     def get_node(self) -> dict:
         nodes_obj = self.core_v1_api.list_node().to_dict()
         return nodes_obj
+
+    def get_network(self):
+        network_ojb = self.custom_api.list_cluster_custom_object("resource.caicloud.io", "v1beta1", "networks")
+        network_info = {x["metadata"]["name"]: x for x in network_ojb["items"]}
+        return network_info

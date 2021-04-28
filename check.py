@@ -24,7 +24,7 @@ from kubernetes.stream import stream
 from clusters import K8sClusters, Cluster
 from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
-from nodecollect import nodecheck, AllRun
+from nodecollect import nodecheck
 
 
 class CheckGlobal(K8sClusters):
@@ -55,20 +55,30 @@ class CheckGlobal(K8sClusters):
     def check_license(self):
         logger.info("start check license")
         license_info = self.get_license()
-        not_after = license_info['spec']['notAfter']
-        quota: dict = license_info['spec']['quota']
-        used = license_info['status']['used']
+        # days
         utc_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-        remain_days = (datetime.datetime.strptime(not_after, utc_format) - datetime.datetime.now()).days
-        remain_physical_cpu = int(quota['physicalCpu']) - int(used['physicalCpu'])
-        status = True if remain_days > 30 and remain_physical_cpu > int(quota['physicalCpu']) * 0.2 else False
+        day_end = license_info['spec']['notAfter']
+        day_start = license_info['spec']['notBefore']
+        day_unused = (datetime.datetime.strptime(day_end, utc_format) - datetime.datetime.now()).days
+        day_status = True if day_unused > 30 else False
+
+        # physical
+        physical_cpu_total = int(license_info['spec']['quota']['physicalCpu'])
+        physical_cpu_used = int(license_info['status']['used']['physicalCpu'])
+        physical_cpu_unused = physical_cpu_total - physical_cpu_used
+        physical_cpu_status = True if physical_cpu_used < physical_cpu_total * 0.8 else False
+
         self.checkout['license'] = {
-            'data': {'remain_days': remain_days, 'remain_physical_cpu': remain_physical_cpu}, 'status': status}
-        if 'logicalCpu' in quota.keys():
-            remain_logical_cpu = int(quota['logicalCpu']) - int(used['logicalCpu'])
-            status = True if remain_logical_cpu > int(quota['logicalCpu']) * 0.2 else False
-            self.checkout['license']['status'] = status
-            self.checkout['license']['data']['remain_logical_cpu'] = remain_logical_cpu
+            'day': {'start': day_start, 'end': day_end, 'unused': day_unused, 'status': day_status},
+            'physical_cpu': {'total': physical_cpu_total, 'used': physical_cpu_used, 'unused': physical_cpu_unused,
+                             'status': physical_cpu_status}}
+        if 'logicalCpu' in license_info['spec']['quota'].keys():
+            logical_cpu_total = int(license_info['spec']['quota']['logicalCpu'])
+            logical_cpu_used = int(license_info['status']['used']['logicalCpu'])
+            logical_cpu_unused = logical_cpu_total - logical_cpu_used
+            logical_cpu_status = True if logical_cpu_used < logical_cpu_total * 0.8 else False
+            self.checkout['license']['logical_cpu'] = {'total': logical_cpu_total, 'used': logical_cpu_used,
+                                                       'unused': logical_cpu_unused, 'status': logical_cpu_status}
 
     @staticmethod
     def get_response(url):
@@ -188,33 +198,24 @@ class CheckGlobal(K8sClusters):
     def check_node_info(self):
         for cluster in self.clusters.keys():
             self.checkout[cluster]['node_info'] = dict()
-        nodes_list = list()
         for machine in self.machines.keys():
-            # logger.info(f"check node {machine} info")
-            n = []
-            n.insert(0, machine)
+            logger.info(f"check node {machine} info")
             cluster = self.machines[machine]['spec']['cluster']
             if cluster:
                 user = self.machines[machine]['spec']['auth']['user']
                 ssh_port = int(self.machines[machine]['spec']['sshPort'])
                 pwd = self.machines[machine]['spec']['auth']['password']
                 key = self.machines[machine]['spec']['auth']['key']
-                n.insert(1, user)
-                n.insert(2, ssh_port)
-                n.insert(3, pwd)
-                n.insert(4, key)
-                n.insert(5, cluster)
-            nodes_list.append(n)
-        a = AllRun(nodes_list)
-        a.concurrent_run()
-        r = a.get_result()
-        for i in r:
-            for k, v in i.items():
-                self.checkout[k]['node_info'].update(v)
+                ssh_obj = nodecheck(machine, user, ssh_port, pwd, key)
+                self.checkout[cluster]['node_info'][machine] = ssh_obj.start_check()
+                ssh_obj.close()
 
-    # ssh_obj = nodecheck(machine, user, ssh_port, pwd, key)
-    # self.checkout[cluster]['node_info'][machine] = ssh_obj.start_check()
-    # ssh_obj.close()
+    def get_name_alias(self):
+        alias_dict = dict()
+        for cluster in self.clusters.keys():
+            alias = self.clusters[cluster]['metadata']['annotations'].get('resource.caicloud.io/alias', 'compass-stack')
+            alias_dict[cluster] = alias
+        return alias_dict
 
     def start_check(self):
         self.check_node_status()
@@ -237,31 +238,52 @@ class CheckK8s(Cluster):
     def check_cidr(self):
         logger.info(f"check {self.cluster_name} cidr")
         cluster_info = self.get_cm('cluster-info', 'kube-system')
-        pod_cidr_ip_num = ipaddress.ip_network(cluster_info['data']['cidr'], strict=True).num_addresses
-        svc_cidr_ip_num = ipaddress.ip_network(cluster_info['data']['serviceIPRange'], strict=True).num_addresses
+        svc_total = ipaddress.ip_network(cluster_info['data']['serviceIPRange'], strict=True).num_addresses - 2
+        svc_used = len(jsonpath.jsonpath(self.svc_list, '$.items[*].spec.cluster_ip'))
+        svc_unused = svc_total - svc_used
+        svc_status = True if svc_used < svc_total * 0.8 else False
+        self.checkout[self.cluster_name]['svc_cidr'] = {
+            'data': {'used': svc_used, 'total': svc_total, 'unused': svc_unused,
+                     'cidr': cluster_info['data']['serviceIPRange']}, 'status': svc_status}
+        network_info = self.get_network()
         pod_ip_list = jsonpath.jsonpath(self.pod_list, '$.items[*].status.pod_ip')
         node_ip_list = jsonpath.jsonpath(self.nodes, '$.items[*].status.addresses[*].address')
-        svc_ip_used = len(jsonpath.jsonpath(self.svc_list, '$.items[*].spec.cluster_ip'))
-        pod_ip_used = len(set(pod_ip_list) - set(node_ip_list))
-        pod_status = True if pod_ip_used < pod_cidr_ip_num * 0.8 else False
-        svc_status = True if svc_ip_used < svc_cidr_ip_num * 0.8 else False
-        self.checkout[self.cluster_name]['pod_cidr'] = {'data': {'used': pod_ip_used, 'quota': pod_cidr_ip_num},
-                                                        'status': pod_status}
-        self.checkout[self.cluster_name]['svc_cidr'] = {'data': {'used': svc_ip_used, 'quota': svc_cidr_ip_num},
-                                                        'status': svc_status}
+        pod_ip_used = set(pod_ip_list).difference(set(node_ip_list))
+        self.checkout[self.cluster_name]['pod_cidr'] = dict()
+        for net_name in network_info.keys():
+            cidr = network_info[net_name]['spec']['subnets'][0]['cidr']
+            pod_total = ipaddress.ip_network(cidr).num_addresses - 2
+            if net_name == "k8s-pod-network":
+                cidr_ip_list = [str(i) for i in ipaddress.ip_network(cidr).hosts()]
+                pod_used = len(pod_ip_used.intersection(set(cidr_ip_list)))
+                pod_unused = pod_total - pod_used
+            else:
+                pod_unused = network_info[net_name]['status']['subnetStatuses'][0]['available']
+                pod_used = pod_total - pod_unused
+            pod_status = True if pod_used < pod_total * 0.8 else False
+            self.checkout[self.cluster_name]['pod_cidr'][net_name] = {
+                'data': {'used': pod_used, 'total': pod_total, 'cidr': cidr, 'unused': pod_unused},
+                'status': pod_status}
 
     def check_pod_status(self):
         logger.info(f"check {self.cluster_name} pods status")
-        status_list = jsonpath.jsonpath(self.pod_list, '$.items[*].status.phase')
+        status_list = list(set(jsonpath.jsonpath(self.pod_list, '$.items[*].status.phase')))
+        status_list.append("restart > 20")
         pod_status = {x['metadata']['name']: {
             'restart': sum(jsonpath.jsonpath(x, '$.status.container_statuses[*].restart_count')),
             'phase': ''.join(jsonpath.jsonpath(x, '$.status.phase'))} for x in self.pod_list['items']}
         pod_checkout = {x: {'data': 0, 'status': True, 'name': []} for x in status_list}
         for pod in pod_status.keys():
             pod_checkout[pod_status[pod]['phase']]['data'] += 1
+            if pod_status[pod]['restart'] > 20:
+                pod_checkout["restart > 20"]['status'] = False
+                pod_checkout["restart > 20"]['data'] += 1
+                pod_checkout["restart > 20"]['name'].append(pod)
             if pod_status[pod]['phase'] not in ['Running', 'Succeeded']:
                 pod_checkout[pod_status[pod]['phase']]['status'] = False
                 pod_checkout[pod_status[pod]['phase']]['name'].append(pod)
+        if pod_checkout["restart > 20"]['data'] == 0:
+            del pod_checkout["restart > 20"]
         self.checkout[self.cluster_name]['pods_status'] = pod_checkout
 
     def check_coredns_status(self):
@@ -292,44 +314,44 @@ class CheckK8s(Cluster):
         clusters = self.get_clusterquotas()
         physical_cpu_total = parse_resource(clusters['system']['status']['physical']['capacity']['cpu'])
         physical_cpu_unused = parse_resource(clusters['system']['status']['physical']['allocatable']['cpu'])
-        physical_cpu_used = "{:.2f}".format(physical_cpu_total - physical_cpu_unused)
+        physical_cpu_used = round(physical_cpu_total - physical_cpu_unused, 3)
+
         physical_cpu_status = True if physical_cpu_unused > physical_cpu_total * 0.2 else False
-        physical_cpu_unused = "{:.2f}".format(physical_cpu_unused)
+        physical_cpu_unused = round(physical_cpu_unused, 3)
 
         physical_mem_total = parse_resource(clusters['system']['status']['physical']['capacity']['memory'])
         physical_mem_unused = parse_resource(clusters['system']['status']['physical']['allocatable']['memory'])
-        physical_mem_used = "{:.2f}Gi".format((physical_mem_total - physical_mem_unused) / ONE_GIBI)
+        physical_mem_used = f"{round((physical_mem_total - physical_mem_unused) / ONE_GIBI, 3)}Gi"
         physical_mem_status = True if physical_mem_unused > physical_mem_total * 0.2 else False
-        physical_mem_unused = "{:.2f}Gi".format(physical_mem_unused / ONE_GIBI)
-        physical_mem_total = "{:.2f}Gi".format(physical_mem_total / ONE_GIBI)
+        physical_mem_unused = f"{round(physical_mem_unused / ONE_GIBI, 3)}Gi"
+        physical_mem_total = f"{round(physical_mem_total / ONE_GIBI, 3)}Gi"
 
         logical_cpu_request_total = parse_resource(clusters['system']['status']['logical']['total']['requests.cpu'])
         logical_cpu_request_used = parse_resource(clusters['system']['status']['logical']['allocated']['requests.cpu'])
-        logical_cpu_request_unused = "{:.2f}".format(logical_cpu_request_total - logical_cpu_request_used)
+        logical_cpu_request_unused = round(logical_cpu_request_total - logical_cpu_request_used, 3)
         logical_cpu_request_status = True if logical_cpu_request_used < logical_cpu_request_total * 0.8 else False
-        logical_cpu_request_used = "{:.2f}".format(logical_cpu_request_used)
+        logical_cpu_request_used = round(logical_cpu_request_used, 3)
 
         logical_cpu_limit_total = parse_resource(clusters['system']['status']['logical']['total']['limits.cpu'])
         logical_cpu_limit_used = parse_resource(clusters['system']['status']['logical']['allocated']['limits.cpu'])
-        logical_cpu_limit_unused = "{:.2f}".format(logical_cpu_limit_total - logical_cpu_limit_used)
+        logical_cpu_limit_unused = round(logical_cpu_limit_total - logical_cpu_limit_used, 3)
         logical_cpu_limit_status = True if logical_cpu_limit_used < logical_cpu_limit_total * 0.8 else False
-        logical_cpu_limit_used = "{:.2f}".format(logical_cpu_limit_used)
+        logical_cpu_limit_used = round(logical_cpu_limit_used, 3)
 
         logical_mem_request_total = parse_resource(clusters['system']['status']['logical']['total']['requests.memory'])
         logical_mem_request_used = parse_resource(
             clusters['system']['status']['logical']['allocated']['requests.memory'])
-        logical_mem_request_unused = "{:.2f}Gi".format(
-            (logical_mem_request_total - logical_mem_request_used) / ONE_GIBI)
+        logical_mem_request_unused = f"{round((logical_mem_request_total - logical_mem_request_used) / ONE_GIBI, 3)}Gi"
         logical_mem_request_status = True if logical_mem_request_used < logical_mem_request_total * 0.8 else False
-        logical_mem_request_total = "{:.2f}Gi".format(logical_mem_request_total / ONE_GIBI)
-        logical_mem_request_used = "{:.2f}Gi".format(logical_mem_request_used / ONE_GIBI)
+        logical_mem_request_total = f"{round(logical_mem_request_total / ONE_GIBI, 3)}Gi"
+        logical_mem_request_used = f"{round(logical_mem_request_used / ONE_GIBI, 3)}Gi"
 
         logical_mem_limit_total = parse_resource(clusters['system']['status']['logical']['total']['limits.memory'])
         logical_mem_limit_used = parse_resource(clusters['system']['status']['logical']['allocated']['limits.memory'])
-        logical_mem_limit_unused = "{:.2f}Gi".format((logical_mem_limit_total - logical_mem_limit_used) / ONE_GIBI)
+        logical_mem_limit_unused = f"{round((logical_mem_limit_total - logical_mem_limit_used) / ONE_GIBI, 3)}Gi"
         logical_mem_limit_status = True if logical_mem_limit_used < logical_mem_limit_total * 0.8 else False
-        logical_mem_limit_total = "{:.2f}Gi".format(logical_mem_limit_total / ONE_GIBI)
-        logical_mem_limit_used = "{:.2f}Gi".format(logical_mem_limit_used / ONE_GIBI)
+        logical_mem_limit_total = f"{round(logical_mem_limit_total / ONE_GIBI, 3)}Gi"
+        logical_mem_limit_used = f"{round(logical_mem_limit_used / ONE_GIBI, 3)}Gi"
 
         self.checkout[self.cluster_name]['cluster_quota'] = {
             "physical": {
@@ -349,40 +371,39 @@ class CheckK8s(Cluster):
         }
 
     def __get_checkout_for_tenant_and_partitions(self, objs):
-
+        data = dict()
         for key in objs.keys():
             cpu_request_total = parse_resource(objs[key]['status']['hard']['requests.cpu'])
             cpu_request_used = parse_resource(objs[key]['status']['used']['requests.cpu'])
-            cpu_request_unused = "{:.2f}".format(cpu_request_total - cpu_request_used)
+            cpu_request_unused = round(cpu_request_total - cpu_request_used, 3)
             cpu_request_status = True if cpu_request_used < cpu_request_total * 0.8 else False
-            cpu_request_used = "{:.2f}".format(cpu_request_used)
+            cpu_request_used = round(cpu_request_used, 3)
 
             mem_request_total = parse_resource(objs[key]['status']['hard']['requests.memory'])
             mem_request_used = parse_resource(objs[key]['status']['used']['requests.memory'])
-            mem_request_unused = "{:.2f}".format((mem_request_total - mem_request_used) / ONE_GIBI)
+            mem_request_unused = f"{round((mem_request_total - mem_request_used) / ONE_GIBI, 3)}Gi"
             mem_request_status = True if mem_request_used < mem_request_total * 0.8 else False
-            mem_request_total = "{:.2f}Gi".format(mem_request_total / ONE_GIBI)
-            mem_request_used = "{:.2f}Gi".format(mem_request_used / ONE_GIBI)
+            mem_request_total = f"{round(mem_request_total / ONE_GIBI, 3)}Gi"
+            mem_request_used = f"{round(mem_request_used / ONE_GIBI, 3)}Gi"
 
             cpu_limit_total = parse_resource(objs[key]['status']['hard']['limits.cpu'])
             cpu_limit_used = parse_resource(objs[key]['status']['used']['limits.cpu'])
-            cpu_limit_unused = "{:.2f}".format(cpu_limit_total - cpu_limit_used)
+            cpu_limit_unused = round(cpu_limit_total - cpu_limit_used, 3)
             cpu_limit_status = True if cpu_limit_used < cpu_limit_total * 0.8 else False
-            cpu_limit_used = "{:.2f}".format(cpu_limit_used)
+            cpu_limit_used = round(cpu_limit_used, 3)
 
             mem_limit_total = parse_resource(objs[key]['status']['hard']['limits.memory'])
             mem_limit_used = parse_resource(objs[key]['status']['used']['limits.memory'])
-            mem_limit_unused = "{:.2f}".format((mem_limit_total - mem_limit_used) / ONE_GIBI)
+            mem_limit_unused = f"{round((mem_limit_total - mem_limit_used) / ONE_GIBI, 3)}Gi"
             mem_limit_status = True if mem_limit_used < mem_limit_total * 0.8 else False
-            mem_limit_total = "{:.2f}Gi".format(mem_limit_total / ONE_GIBI)
-            mem_limit_used = "{:.2f}Gi".format(mem_limit_used / ONE_GIBI)
-            data = dict()
+            mem_limit_total = f"{round(mem_limit_total / ONE_GIBI, 3)}Gi"
+            mem_limit_used = f"{round(mem_limit_used / ONE_GIBI, 3)}Gi"
             data[key] = self.__get_resource_json(cpu_request_total, cpu_request_used, cpu_request_unused,
                                                  cpu_request_status, cpu_limit_total, cpu_limit_used, cpu_limit_unused,
                                                  cpu_limit_status, mem_request_total, mem_request_used,
                                                  mem_request_unused, mem_request_status, mem_limit_total,
                                                  mem_limit_used, mem_limit_unused, mem_limit_status)
-            return data
+        return data
 
     def check_tenants_quotas(self):
         logger.info(f"check {self.cluster_name} tenants quotas")
@@ -395,6 +416,9 @@ class CheckK8s(Cluster):
         logger.info(f"check {self.cluster_name} partitions quotas")
         partitions = self.get_partitions()
         ignore_list = ['default', 'kube-node-lease', 'kube-public', 'kube-system']
+        for part in partitions.keys():
+            if partitions[part]['status']['hard'] is None:
+                ignore_list.append(part)
         for key in ignore_list:
             del partitions[key]
         data = self.__get_checkout_for_tenant_and_partitions(partitions)
@@ -412,7 +436,7 @@ class CheckK8s(Cluster):
         external_domain.extend(internal_domain)
         name = 'check-pod'
         ns = 'default'
-        self.checkout[self.cluster_name]['dns_nslookup'] = {'data': [], 'status': True}
+        self.checkout[self.cluster_name]['dns_nslookup'] = {}
         for domain in external_domain:
             cmd = ['nslookup', domain]
             self.pod_exec(name, ns, cmd)
@@ -421,8 +445,9 @@ class CheckK8s(Cluster):
             result = pattern.findall(resp)
             if result:
                 status = False
-                self.checkout[self.cluster_name]['dns_nslookup']['data'].append(domain)
-                self.checkout[self.cluster_name]['dns_nslookup']['status'] = status
+                self.checkout[self.cluster_name]['dns_nslookup'][domain] = status
+            else:
+                self.checkout[self.cluster_name]['dns_nslookup'][domain] = True
 
     def __get_node_pod_ip(self):
         node_pod_ip = dict()
@@ -457,7 +482,7 @@ class CheckK8s(Cluster):
             resp1 = self.pod_exec(name, ns, cmd1)
             result1 = pattern.findall(resp1)
             if not result1:
-                self.checkout[self.cluster_name]['network']["pod_to_pod"]['data'].append(pod_ip)
+                self.checkout[self.cluster_name]['network']["pod_to_pod"]['data'].append(f'{node}:{pod_ip}')
                 self.checkout[self.cluster_name]['network']["pod_to_pod"]['status'] = False
 
     def create_check_pod(self, image):

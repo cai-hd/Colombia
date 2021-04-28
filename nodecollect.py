@@ -344,7 +344,7 @@ c
             zprocess["zprocess"]["result"] = r
         else:
             zprocess["zprocess"]["checkpass"] = True
-            zprocess["zprocess"]["result"] = ""
+            zprocess["zprocess"]["result"] = []
         return zprocess
 
     def get_ntp(self):
