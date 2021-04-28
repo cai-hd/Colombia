@@ -45,7 +45,6 @@ def index():
     cid = 'compass-stack'
     g.data[cid]['node_info'] = merge_node(g.data, cid)
     g.data[cid]['pod_info'] = merge_pod(g.data, cid)
-    print(g.data[cid]['node_info'])
     return render_template("index.html", nav=g.nav, data=g.data[cid])
 
 

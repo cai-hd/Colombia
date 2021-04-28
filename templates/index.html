@@ -12,12 +12,9 @@
   {%  for i in nav %}
       <li class="nav-item active">
                 <a class="nav-link" href="{{ i }}">{{ i }}
-                  <span class="sr-only">(current)</span>
                 </a>
               </li>
-
     {% endfor %}
-
 {% endblock %}
 
 {% block content %}
@@ -31,10 +28,16 @@
         <h5 class="card-title"> ETCD </h5>
         <p class="card-text small">
             {% for k,v in data['etcd_status'].items() %}
-            {{ k }} : {{ v['data'] }} {{ v['status'] }}<br>
+                <li>{{ k }} : {{ v['data']  }}
+                {%  if v['status'] %}
+                <span class="badge badge-success">Ready</span>
+                {% else %}
+                <span class="badge badge-danger">Error</span>
+                    {% endif %}
+                </li>
             {% endfor  %}
         </p>
-        <span  class="badge badge-success">ready</span>
+
       </div>
     </div>
   </div>
@@ -44,10 +47,16 @@
         <h5 class="card-title">API Server</h5>
         <p class="card-text small">
             {% for k in data['apiserver_status'] %}
-             {{ k  }}<br>
+                 {%  for a,v in k.items() %}
+             <li>{{ a }}
+                  {%  if v['status']  %}
+                     <span class="badge badge-success">Ready</span>
+                {% else %}
+                <span class="badge badge-danger">Error</span>
+                  {% endif %}</li>
+                     {% endfor %}
             {% endfor  %}
         </p>
-        <span class="badge badge-success">ready</span>
       </div>
     </div>
   </div>
@@ -59,10 +68,16 @@
         <h5 class="card-title">Controller</h5>
         <p class="card-text small">
             {% for k in data['controller_status'] %}
-             {{ k  }}<br>
-            {% endfor  %}
+                {%  for a,v in k.items() %}
+             <li>{{ a }}
+                  {%  if v['status']  %}
+                     <span class="badge badge-success">Ready</span>
+                {% else %}
+                <span class="badge badge-danger">Error</span>
+                  {% endif %}</li>
+                     {% endfor %}
+      {% endfor %}
         </p>
-        <span class="badge badge-success">ready</span>
       </div>
     </div>
   </div>
@@ -74,10 +89,16 @@
         <h5 class="card-title">Scheduler</h5>
         <p class="card-text small">
             {% for k in data['scheduler_status'] %}
-             {{ k  }}<br>
+                {%  for a,v in k.items() %}
+             <li>{{ a }}
+                  {%  if v['status']  %}
+                     <span class="badge badge-success">Ready</span>
+                {% else %}
+                <span class="badge badge-danger">Error</span>
+                  {% endif %}</li>
+                     {% endfor %}
             {% endfor  %}
         </p>
-        <span class="badge badge-success">ready</span>
       </div>
     </div>
   </div>
@@ -87,14 +108,13 @@
       <div class="card-body">
         <h5 class="card-title">DNS</h5>
         <p class="card-text small">
+               <li>available:{{ data['coredns_status']['data']['available'] }}</li>
+          <li> ready: {{ data['coredns_status']['data']['ready'] }}</li>
+          <li> replicas : {{ data['coredns_status']['data']['replicas'] }}</li>
 
-
-                available:{{ data['coredns_status']['data']['available'] }}
-                ready: {{ data['coredns_status']['data']['ready'] }}
-                replicas : {{ data['coredns_status']['data']['replicas'] }}
 
         </p>
-        <span class="badge badge-success">ready</span>
+
       </div>
     </div>
   </div>
@@ -103,7 +123,9 @@
       <div class="card-body">
         <h5 class="card-title">NSLookUp</h5>
         <p class="card-text small">
-            {{ data['dns_nslookup']['data'] }}
+            {%  for i in data['dns_nslookup'    ]['data']  %}
+             {{ i }}
+            {% endfor %}
         </p>
           {%  if data['dns_nslookup']['status']   %}
         <span class="badge badge-success">ready</span>
@@ -140,9 +162,13 @@
         <h5 class="card-title">Cluster</h5>
         <p class="card-text small">
             {% for k,v in  data['cluster_quota'].items() %}
-    {{ k }} <br>
+               <li>{{ k }}</li>
         {%  for a,v in v.items() %}
-            {{  a }} {{  v }}<br>
+            <span>{{ a }}</span>&nbsp;
+            Total:{{  v['data']['total'] }} &nbsp;
+                       Unused: {{  v['data']['unused'] }}&nbsp;
+                       Used: {{  v['data']['used'] }}
+            <br>
             {% endfor %}
     {% endfor %}
         </p>
@@ -157,11 +183,15 @@
         <h5 class="card-title">Tenants</h5>
         <p class="card-text small">
             {% for k,v in  data['tenants_quota'].items() %}
-    {{ k }} <br>
-        {%  for a,v in v.items() %}
-            {{  a }} {{  v }}<br>
+            <li>{{ k }}</li>
+             {%  for a,v in v.items() %}
+                <span>{{ a }}</span>&nbsp;
+                Total:{{  v['data']['total'] }} &nbsp;
+                           Unused: {{  v['data']['unused'] }}&nbsp;
+                           Used: {{  v['data']['used'] }}
+                <br>
             {% endfor %}
-    {% endfor %}
+            {% endfor %}
         </p>
 
       </div>
@@ -176,9 +206,13 @@
         <h5 class="card-title">Partitions</h5>
         <p class="card-text small">
             {% for k,v in  data['partitions_quota'].items() %}
-    {{ k }} <br>
-        {%  for a,v in v.items() %}
-            {{  a }} {{  v }}<br>
+    <li>{{ k }}</li>
+             {%  for a,v in v.items() %}
+                <span>{{ a }}</span>&nbsp;
+                Total:{{  v['data']['total'] }} &nbsp;
+                           Unused: {{  v['data']['unused'] }}&nbsp;
+                           Used: {{  v['data']['used'] }}
+                <br>
             {% endfor %}
     {% endfor %}
         </p>
