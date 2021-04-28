@@ -18,9 +18,15 @@
     <h7 class="list-group-item-heading">license info </h7>
   </p>
       <ul class="list-group">
-  <li class="list-group-item list-group-item-success">Remain_days {{  license['data']['remain_days'] }}</li>
-  <li class="list-group-item list-group-item-success">Remain_days {{  license['data']['remain_physical_cpu']}}</li>
+  <li class="list-group-item list-group-item-success">Remain_days {{  license['day']['unused'] }} &nbsp
+   end  {{ license['day']['end'] }}
+  </li>
+  <li class="list-group-item list-group-item-success">Remain_physical_cpu {{  license['remain_physical_cpu'] }} <br>
+   total {{  license['physical_cpu']['total'] }}
+   used {{  license['physical_cpu']['used'] }}
+   unused {{  license['physical_cpu']['unused'] }}
 
+  </li>
 
 </ul>
 </div>

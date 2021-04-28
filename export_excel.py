@@ -17,17 +17,16 @@ from openpyxl import Workbook, worksheet
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter, column_index_from_string
 
-title_font = Font(u'宋体', bold=True, size=16)
+title_font = Font( bold=True, size=16)
 title_fill = PatternFill(patternType="solid", start_color="87CEEB")
-subtitle_font = Font(u'宋体', bold=True, size=12)
+subtitle_font = Font(bold=True, size=12)
 subtitle_fill = PatternFill(patternType="solid", start_color="E0FFFF")
 alignment = Alignment(horizontal="center", vertical="center")
 error_font = Font(color="FF0000")
 info_font = Font()
 border = Border(left=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"),
                 top=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000"))
-with open(f'./tmp/dump-{time.strftime("%Y%m%d", time.localtime())}', 'rb') as dump:
-    check_data = pickle.load(dump)
+
 
 
 def set_data(ws: worksheet, start_column: int, start_row: int, title: list, values: list):
@@ -91,7 +90,7 @@ def set_dimension(ws: worksheet):
         ws.row_dimensions[i].height = 20
 
 
-def get_node_dict(key):
+def get_node_dict(key, check_data):
     node_metric = {dict(node._asdict())['node']: dict(node._asdict()) for node in
                    check_data[key]['context']['metric']['nodes']}
     node_context = {node['Hostname']: node for node in check_data[key]['context']['node']['result']}
@@ -113,7 +112,7 @@ def get_node_dict(key):
     return node_info
 
 
-def get_pod_dict(key):
+def get_pod_dict(key,check_data):
     pod_metric = {dict(pod._asdict())['pod']: dict(pod._asdict()) for pod in
                   check_data[key]['context']['metric']['pods']}
     pod_context = {pod['name']: pod for pod in check_data[key]['context']['pod']['result']}
@@ -122,7 +121,7 @@ def get_pod_dict(key):
     return pod_context
 
 
-def format_data_for_k8s(ws: worksheet, cluster: str):
+def format_data_for_k8s(ws: worksheet, cluster: str, check_data):
     ws.sheet_properties.pageSetUpPr.fitToPage = True
 
     # cluster status
@@ -235,7 +234,7 @@ def format_data_for_k8s(ws: worksheet, cluster: str):
 
     # node
     start_column, start_row, end_column, end_row = get_dimension(ws)
-    node_dict = get_node_dict(cluster)
+    node_dict = get_node_dict(cluster,check_data)
     head_column = start_column
     head_row = end_row + 2
     start_row = head_row + 2
@@ -361,7 +360,7 @@ def format_data_for_k8s(ws: worksheet, cluster: str):
 
     # pod info
     start_column, start_row, end_column, end_row = get_dimension(ws)
-    pod_dict = get_pod_dict(cluster)
+    pod_dict = get_pod_dict(cluster, check_data)
     head_column = start_column
     head_row = end_row + 2
     start_row = head_row + 2
@@ -389,7 +388,7 @@ def format_data_for_k8s(ws: worksheet, cluster: str):
     set_headline(ws, head_column, head_row, head_end_column, head_row, 'pod info')
 
 
-def format_other_data(ws: worksheet):
+def format_other_data(ws: worksheet, check_data):
     # license
     license_title = [['license'], ['resource', 'remain', 'total/start', 'used/end']]
     license_dict = check_data['license']

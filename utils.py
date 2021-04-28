@@ -180,7 +180,6 @@ def merge_pod(dump, cid):
                 i['cpu'] = m.cpu
                 i['cpu_requests'] = m.cpu_requests
                 i['cpu_limits'] = m.cpu_limits
-                #i['start_time'] = f'{i["start_time"]:%Y-%m-%d %H:%M:%S }'
                 i['memory'] = m.memory
                 i['memory_requests'] = m.memory_requests
                 i['memory_limits'] = m.memory_limits

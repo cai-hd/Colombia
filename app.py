@@ -1,12 +1,17 @@
 import eventlet
 eventlet.monkey_patch()
 import pickle
-from flask import Flask, render_template, request, redirect, url_for, g, flash
+import time
+
+from flask import Flask, render_template, request, redirect, url_for, g, flash, send_file
 from flask_socketio import SocketIO, emit
 from flask_redis import FlaskRedis
 from utils import merge_pod, merge_node
 from main import check
 from threading import Lock
+from export_excel import format_data_for_k8s,format_other_data,set_dimension,Workbook
+
+
 
 thread = None
 thread_lock = Lock()
@@ -42,7 +47,7 @@ def before_request():
 
 @app.route("/")
 def index():
-    cid = 'compass-stack'
+    cid = 'stack'
     g.data[cid]['node_info'] = merge_node(g.data, cid)
     g.data[cid]['pod_info'] = merge_pod(g.data, cid)
     return render_template("index.html", nav=g.nav, data=g.data[cid])
@@ -66,6 +71,23 @@ def volume():
     volume = g.data['volumes_status']
     return render_template("volume.html", nav=g.nav, volume=volume)
 
+
+@app.route("/export")
+def export():
+    wb = Workbook()
+    default_sheet = wb.active
+    wb.remove(default_sheet)
+    for cluster in g.data.keys():
+        if cluster not in ['license', 'volumes_status']:
+            ws = wb.create_sheet(cluster)
+            format_data_for_k8s(ws, cluster, g.data)
+            set_dimension(ws)
+    ws = wb.create_sheet("others")
+    format_other_data(ws, g.data)
+    set_dimension(ws)
+    file_name = f'./report/fjg{time.strftime("%Y%m%d%H%M%S", time.localtime())}.xlsx'
+    wb.save(file_name)
+    return send_file(file_name, as_attachment=True)
 
 @app.route('/recheck')
 def recheck():

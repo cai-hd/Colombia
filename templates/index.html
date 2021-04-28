@@ -262,7 +262,7 @@
         {% for i in data['pod_info'] %}
              <tr class="small">
                <th>{{i['ns']}}</th>
-               <th>{{i['name']}}</th>
+               <th><a href="#">{{i['name']}}</a></th>
                <th>{{i['status']}}</th>
                <th>{{i['restart']}}</th>
                <th>{{i['start_time']}}</th>
@@ -271,9 +271,9 @@
                <th>{{ i['cpu'] }}</th>
                <th>{{ i['cpu_requests'] | round(2) }} </th>
                <th>{{ i['cpu_limits'] | round(2)  }}</th>
-               <th>{{ i['memory'] | round(2) }}</th>
-               <th>{{ i['memory_requests'] | round(2)  }}</th>
-               <th>{{ i['memory_limits'] | round(2)  }}</th>
+               <th>{{ i['memory']}}</th>
+               <th>{{ i['memory_requests']   }}</th>
+               <th>{{ i['memory_limits']  }}</th>
              </tr>
         {% endfor %}
         </tbody>
@@ -406,7 +406,7 @@
               <td>{{ v['status'] }}</td>
               <td>{{ v['kernel'] }}</td>
               <td>{{ v['cpu']}} / {{   v['memory']  }}</td>
-              <td>{{ v['cpu_usage']}} /  {{v['mem_usage'] |round(2) }}</td>
+              <td>{{ v['cpu_usage']}} /  {{v['mem_usage']  }}</td>
           </tr>
         {% endfor %}
         </tbody>
