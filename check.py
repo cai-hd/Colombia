@@ -429,9 +429,9 @@ class CheckK8s(Cluster):
         partitions = self.get_partitions()
         ignore_list = ['default', 'kube-node-lease', 'kube-public', 'kube-system']
         for part in partitions.keys():
-            if partitions[part]['status']['hard'] is None:
+            if partitions[part]['status']['hard'] is None or not partitions[part]['status']['hard']:
                 ignore_list.append(part)
-        for key in ignore_list:
+        for key in set(ignore_list):
             del partitions[key]
         data = self.__get_checkout_for_tenant_and_partitions(partitions)
         self.checkout[self.cluster_name]['partitions_quota'] = data
