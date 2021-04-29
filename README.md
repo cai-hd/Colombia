@@ -25,7 +25,7 @@ quickly. After the inspection, we also need to output the report according to th
 excel
 
 
-###  how to use 
+### How to use 
 
 1. Copy config.ini.sample to config.ini. Please refer to the following instructions for specific configuration
 ```ini
