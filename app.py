@@ -1,17 +1,15 @@
 import eventlet
+
 eventlet.monkey_patch()
 import pickle
 import time
-
 from flask import Flask, render_template, request, redirect, url_for, g, flash, send_file
 from flask_socketio import SocketIO, emit
 from flask_redis import FlaskRedis
 from utils import merge_pod, merge_node
 from main import check
 from threading import Lock
-from export_excel import format_data_for_k8s,format_other_data,set_dimension,Workbook
-
-
+from export_excel import format_data_for_k8s, format_other_data, set_dimension, Workbook
 
 thread = None
 thread_lock = Lock()
@@ -88,6 +86,7 @@ def export():
     file_name = f'./report/fjg{time.strftime("%Y%m%d%H%M%S", time.localtime())}.xlsx'
     wb.save(file_name)
     return send_file(file_name, as_attachment=True)
+
 
 @app.route('/recheck')
 def recheck():
