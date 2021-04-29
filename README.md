@@ -1,59 +1,102 @@
 # Colombia
 
-Script to generate a HTML report of CPU/memory requests vs. usage (collected via Metrics API/Heapster) for one or more Kubernetes clusters.
-Diagnosis platform component status, including pod, binary components
+###  What's the meaning of this project name?
+
+There is no special meaning, that is to say, Colombia is a country, because on the day of launching this project, 
+I heard something about this country on the news, but I have forgotten the specific thing   (-_-) 
 
 
-### What the script does
 
-via in-cluster serviceAccount, or via custom Cluster Registry REST endpoint)
+### What the tool does ？
 
-Shell component information is also used
 
-### Features
+We need to conduct regular inspection on the delivered customer environment. The inspection contents include the following
 
-- [x] Kubernetes core component
-- [x] node
-- [x] pod
-- [x] job
-- [x] metric(Node,Pod)
-- [ ] readiness
-# how to use 
+|  Component    | Check Item  |
+|  ----  | ----           |       
+| Core component |ETCD API Server Controller  Scheduler DNS       |
+| Node  |  Docker Load Contrack Openfile DNS diskio diskusage nicio  NTP kubelet  kubeproxy  usage  .. etc              |        
+|Pod    |  status start_time ip host resource metric ... etc          |  
+|Gluster|   volume status              |
+|License|   Remain_days time Remain_physical_cp             |
 
-1. edit config.ini, Add the details of the cluster, including the node IP and API server address, and also need a token that can access the cluster
-   If there is no token, you can create it in the following way
-   ```shell
-   # Create a service account
-   kubectl create sa op 
-   # Grant the new service account to the Cluster Administrator
-   kubectl create clusterrolebinding  report --clusterrole cluster-admin  --serviceaccount=default:op
-   # Get the token used by the service account
-   SECRET_NAME=$(kubectl get serviceaccount op -o jsonpath='{.secrets[0].name}')
-   
-   #decode token 
-   TOKEN=$(kubectl get secret $SECRET_NAME -o jsonpath='{.data.token}' | base64 --decode)
-   echo $TOKEN
-   
-   eyJhbGciOiJSUzI1Nim5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6Im9wLXRva2VuLWc0NDg0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6Im9wIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiYzhlMDRhZTQtMjNjZS00YjA4LTg2ZmQtNzRjMmZhMWNlYTliIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRlZmF1bHQ6b3AifQ.AKMqv7hRb-_ThQt_UkOud77OV6Wc8fIhe_Mg2niSh5KMSAGztEntz_B9avEz5RRW8sXWDHOqeR0KYzKJOktQLQ60yoItpqVzh5xe4eSW05Ym9fsYcjLltDwUAGYpdqFL3_1NG4UjPvWnY4G8XwJ1LWb-X1eSuvlYz5KTaaDf15-37bkMpAX20rma7phc8dK8ZhhqIauVO-UzfjQ4VSJGJOxKbZd3ZPYORyjpnN48oHtju-HBwBlBkuWJhmqJh7ABOwug3t__yCgNaUxiD8l0gv9QxjNa-SEa1Tj9z4ZXn_mQExAcJYhSbFrBRf4f5yw7ahCx8-wrUxIQDOGGG_19mA
-   ```
-   
-2. Running as Docker container
-    ```shell
-    docker build -t colombia:0.1 .  
-    docker run --rm -it -v $(pwd)/output:/app/output  -v $(pwd)/config.ini:/app/config.ini colombia:0.1
-    ```
-   The output will be HTML files plus multiple tab-separated files:
+At the same time, we know the progress of the inspection in real time. We need to view the results of the inspection very
+quickly. After the inspection, we also need to output the report according to the inspection situation. Here we will export
+excel
 
-   output/core.html
-   List Kubernetes core a component page, links to all other HTML pages.
+
+###  how to use 
+
+1. Copy config.ini.sample to config.ini. Please refer to the following instructions for specific configuration
+```ini
+
+[kubernetes]
+# Cluster type, used to distinguish compass control cluster and k8s community version. The values are: compass, default
+k8s_type = compass
+
+#If k8s_ If the type is compass, then k8s conf Path should be the configuration file that controls the cluster
+k8s_conf_path = /compass/.kubectl.kubeconfig
+# Tenant with platform administrator authority and password
+admin_user_name = admin
+admin_user_pwd = Pwd123456
+
+# External domain name to be detected
+externalDomain = www.sina.com www.baidu.com www.fujiangong.com
+# Internal domain name to be detected
+internalDomain = kubernetes.default coredns.kube-system.svc.cluster.local
+
+# images repository
+[cargo]
+node_ip = 10.0.1.126
+ssh_user = root
+ssh_pwd = Caicloud@2020
+ssh_port = 22
+harbor_user = admin
+harbor_pwd = Pwd123456
+
+
+#Customer information, prefix field of output report
+[info]
+customer = compass
+```
+
+2. Prepare configmap
+* config.ini  
+* kubeconfig
+
+3. load images to cargo 
+* busybox
+
+4. Publishing applications
+* config.ini  ---> /app/config.ini
+* kubeconfig ---> /.kubectl.kubeconfig
+* nodeport or inress are OK
+
+5. When you visit the app for the first time, you will be forced to jump to the check interface
+
+![first](./img/1.png)
+
+click Execute button,Start the inspection task, and output the progress of the check in real time in the log window
+
+![two](./img/2.png)
+
+After the completion of the test job, there will be a message prompt, and then you can view the inspection
+![three](./img/3.png)
+![four](./img/4.png)
+![five](./img/5.png)
+
+
+6. Click the Export button to output the excel of the result of this inspection, with the title of customer name plus 
+the execution time as follows
    
-   output/pod.html
+![six](./img/6.png)
+
+
+
+
    
-   output/job.html
-   
-   output/node.html
-   
-   output/metric.html
-   
+
+
+
 
 
