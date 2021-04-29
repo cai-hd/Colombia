@@ -85,7 +85,6 @@ After the completion of the test job, there will be a message prompt, and then y
 ![four](./img/4.png)
 ![five](./img/5.png)
 
-
 6. Click the Export button to output the excel of the result of this inspection, with the title of customer name plus 
 the execution time as follows
    
