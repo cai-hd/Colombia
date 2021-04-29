@@ -24,7 +24,7 @@ from kubernetes.stream import stream
 from clusters import K8sClusters, Cluster
 from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
-from nodecollect import nodecheck
+from nodecollect import nodecheck, AllRun
 
 
 class CheckGlobal(K8sClusters):
@@ -198,17 +198,29 @@ class CheckGlobal(K8sClusters):
     def check_node_info(self):
         for cluster in self.clusters.keys():
             self.checkout[cluster]['node_info'] = dict()
+        nodes_list = list()
         for machine in self.machines.keys():
-            logger.info(f"check node {machine} info")
+            # logger.info(f"check node {machine} info")
+            n = []
+            n.insert(0, machine)
             cluster = self.machines[machine]['spec']['cluster']
             if cluster:
                 user = self.machines[machine]['spec']['auth']['user']
                 ssh_port = int(self.machines[machine]['spec']['sshPort'])
                 pwd = self.machines[machine]['spec']['auth']['password']
                 key = self.machines[machine]['spec']['auth']['key']
-                ssh_obj = nodecheck(machine, user, ssh_port, pwd, key)
-                self.checkout[cluster]['node_info'][machine] = ssh_obj.start_check()
-                ssh_obj.close()
+                n.insert(1, user)
+                n.insert(2, ssh_port)
+                n.insert(3, pwd)
+                n.insert(4, key)
+                n.insert(5, cluster)
+            nodes_list.append(n)
+        a = AllRun(nodes_list)
+        a.concurrent_run()
+        r = a.get_result()
+        for i in r:
+            for k, v in i.items():
+                self.checkout[k]['node_info'].update(v)
 
     def get_name_alias(self):
         alias_dict = dict()
