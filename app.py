@@ -3,6 +3,7 @@ import eventlet
 eventlet.monkey_patch()
 import pickle
 import time
+import configparser
 from flask import Flask, render_template, request, redirect, url_for, g, flash, send_file
 from flask_socketio import SocketIO, emit
 from flask_redis import FlaskRedis
@@ -10,7 +11,7 @@ from utils import merge_pod, merge_node
 from main import check
 from threading import Lock
 from export_excel import format_data_for_k8s, format_other_data, set_dimension, Workbook
-
+from utils import config_obj
 thread = None
 thread_lock = Lock()
 
@@ -19,6 +20,8 @@ app.config['SECRET_KEY'] = 'dshkwnds'
 app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 socket_io = SocketIO(app, async_mode='eventlet')
 redis = FlaskRedis(app)
+
+customer_name = config_obj.get("info", "customer")
 
 
 def listener(channels):
@@ -83,7 +86,7 @@ def export():
     ws = wb.create_sheet("others")
     format_other_data(ws, g.data)
     set_dimension(ws)
-    file_name = f'./report/fjg{time.strftime("%Y%m%d%H%M%S", time.localtime())}.xlsx'
+    file_name = f'./report/{customer_name}_{time.strftime("%Y%m%d%H%M%S", time.localtime())}.xlsx'
     wb.save(file_name)
     return send_file(file_name, as_attachment=True)
 

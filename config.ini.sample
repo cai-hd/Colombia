@@ -28,3 +28,7 @@ harbor_pwd = Pwd123456
 
 [redis]
 host = localhost
+
+
+[info]
+customer = ops
