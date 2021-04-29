@@ -18,7 +18,7 @@ We need to conduct regular inspection on the delivered customer environment. The
 | Node  |  Docker Load Contrack Openfile DNS diskio diskusage nicio  NTP kubelet  kubeproxy  usage  .. etc              |        
 |Pod    |  status start_time ip host resource metric ... etc          |  
 |Gluster|   volume status              |
-|License|   Remain_days time Remain_physical_cp             |
+|License|   Remain days time Remain physical cpu            |
 
 At the same time, we know the progress of the inspection in real time. We need to view the results of the inspection very
 quickly. After the inspection, we also need to output the report according to the inspection situation. Here we will export
