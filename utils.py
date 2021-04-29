@@ -1,8 +1,6 @@
 import re
 import sys
 from configparser import ConfigParser
-
-import docker
 import paramiko
 import requests
 from requests.auth import HTTPBasicAuth
@@ -142,20 +140,6 @@ class RemoteClientCompass(object):
         logger.info(f"logout from {self.host}")
 
 
-def load_images_to_cargo(user: str, pwd: str, registry: str, images_tar):
-    client = docker.from_env()
-    login_info = client.login(username=user, password=pwd, registry=registry)
-    logger.info(f'docker login to {registry} {login_info}')
-    with open(images_tar, 'rb') as image_binary:
-        load_images_list = client.images.load(image_binary)
-        logger.info(f'docker load images {load_images_list}')
-    for image in load_images_list:
-        image_version = image.tags[0].split(":")[1]
-        image_name = image.tags[0].split(":")[0].split("/")[-1]
-        image_repository = f'{registry}/library/{image_name}'
-        image.tag(image_repository, image_version)
-        push_info = client.images.push(image_repository, tag=image_version)
-        logger.info(f'docker push {push_info}')
 
 
 def merge_node(dump, cid):

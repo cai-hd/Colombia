@@ -11,7 +11,6 @@ import re
 import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-
 from log import logger
 from utils import RemoteClientCompass, config_obj
 

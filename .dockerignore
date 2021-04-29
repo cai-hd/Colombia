@@ -3,6 +3,8 @@
 .gitignore
 
 
+*.tar
+
 
 # Docker
 docker-compose.yml
