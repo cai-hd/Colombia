@@ -115,12 +115,16 @@ class RemoteClientCompass(object):
     @logger.catch
     def cmd(self, commands):
         self.connect()
+        commands = "sudo " + commands if self.user != 'root' else commands
         ssh = paramiko.SSHClient()
         ssh._transport = self.__transport
-        stdin, stdout, stderr = ssh.exec_command(commands)
+        stdin, stdout, stderr = ssh.exec_command(commands, get_pty=True)
+        if self.user != 'root':
+            stdin.write(f'{self.pwd}\n')
+            stdin.flush()
         status = stdout.channel.recv_exit_status()
         if status == 0:
-            response = stdout.readlines()
+            response = stdout.readlines() if self.user == 'root' else stdout.readlines()[2:]
             for line in response:
                 logger.debug(f'INPUT: {commands} | OUTPUT: {line}')
             return response
@@ -138,8 +142,6 @@ class RemoteClientCompass(object):
     def close(self):
         self.__transport.close()
         logger.info(f"logout from {self.host}")
-
-
 
 
 def merge_node(dump, cid):
@@ -168,4 +170,3 @@ def merge_pod(dump, cid):
                 i['memory_requests'] = m.memory_requests
                 i['memory_limits'] = m.memory_limits
     return pods
-

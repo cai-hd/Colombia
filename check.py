@@ -143,7 +143,7 @@ class CheckGlobal(K8sClusters):
             if volumes_list:
                 self.checkout['volumes_status']['compass-stack'] = dict()
                 for volume in volumes_list:
-                    volume = volume.rstrip("\n")
+                    volume = volume.rstrip("\r\n")
                     logger.info(f"check compass gluster volumes {volume} brick")
                     self.checkout['volumes_status']['compass-stack'][volume] = {'data': list(), 'status': True}
                     volume_status_info_cmd = f"gluster volume status {volume} detail"
@@ -170,7 +170,7 @@ class CheckGlobal(K8sClusters):
             if volumes_list:
                 self.checkout['volumes_status']['cargo'] = dict()
                 for volume in volumes_list:
-                    volume = volume.rstrip("\n")
+                    volume = volume.rstrip("\r\n")
                     logger.info(f"check cargo gluster volumes {volume} brick")
                     self.checkout['volumes_status']['cargo'][volume] = {'data': list(), 'status': True}
                     volume_status_info_cmd = f"docker exec gluster-container gluster volume status {volume} detail"
