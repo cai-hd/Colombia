@@ -70,7 +70,7 @@ customer = compass
 4. Publishing applications
 * config.ini  ---> /app/config.ini
 * kubeconfig ---> /compass/.kubectl.kubeconfig
-* nodeport or inress are OK
+* nodePort or ingress are OK
 
 5. When you visit the app for the first time, you will be forced to jump to the check interface
 
