@@ -24,7 +24,7 @@ from kubernetes.stream import stream
 from clusters import K8sClusters, Cluster
 from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
-from nodecollect import nodecheck, AllRun
+from nodecollect import AllRun
 
 
 class CheckGlobal(K8sClusters):
@@ -165,7 +165,7 @@ class CheckGlobal(K8sClusters):
         logger.info("start cargo gluster volumes status")
         ssh_obj_cargo = RemoteClientCompass(config_obj.get('cargo', 'node_ip'), config_obj.get('cargo', 'ssh_user'),
                                             int(config_obj.get('cargo', 'ssh_port')),
-                                            config_obj.get('cargo', 'ssh_pwd'), '')
+                                            config_obj.get('cargo', 'ssh_pwd'), config_obj.get('cargo', 'ssh_key'))
         container_list = ssh_obj_cargo.cmd(r"sudo docker ps --format '{{.Names}}'")
         if "gluster-container\r\n" in container_list:
             volumes_list_cmd = r"sudo docker exec gluster-container gluster volume list"

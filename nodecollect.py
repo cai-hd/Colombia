@@ -153,7 +153,6 @@ class nodecheck(RemoteClientCompass):
               }
            ]
         }
-c
         """
         dnslist = config_obj.get('kubernetes', 'externalDomain').split()
         dns = defaultdict(list)
@@ -298,7 +297,7 @@ c
         """
 
         nicresult = defaultdict(list)
-        cmd = r'''ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*"|sort -u'''
+        cmd = r'''sudo ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*|eno[0-9]*"|sort -u'''
         niclist = self.execute_commands(cmd)
         cmd1 = r'''sar -n DEV 1 8'''
         nicstatus = self.execute_commands(cmd1)
