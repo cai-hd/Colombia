@@ -133,7 +133,10 @@ class CheckGlobal(K8sClusters):
 
     def check_volumes_status(self):
         logger.info("start compass gluster volumes status")
-        for master_ip in self.clusters['compass-stack']['spec']['masters']:
+        all_ip = self.clusters['compass-stack']['spec']['masters']
+        node_ip = self.clusters['compass-stack']['spec']['nodes']
+        all_ip.extend(node_ip)
+        for master_ip in all_ip:
             ssh_obj = RemoteClientCompass(master_ip, self.machines[master_ip]['spec']['auth']['user'],
                                           int(self.machines[master_ip]['spec']['sshPort']),
                                           self.machines[master_ip]['spec']['auth']['password'],
@@ -164,7 +167,7 @@ class CheckGlobal(K8sClusters):
                                             int(config_obj.get('cargo', 'ssh_port')),
                                             config_obj.get('cargo', 'ssh_pwd'), '')
         container_list = ssh_obj_cargo.cmd(r"sudo docker ps --format '{{.Names}}'")
-        if "gluster-container" in container_list:
+        if "gluster-container\r\n" in container_list:
             volumes_list_cmd = r"sudo docker exec gluster-container gluster volume list"
             volumes_list = ssh_obj_cargo.cmd(volumes_list_cmd)
             if volumes_list:

@@ -38,11 +38,11 @@ class nodecheck(RemoteClientCompass):
         }
         """
         docker_status = defaultdict(dict)
-        cmd = r'''sudo systemctl is-active docker'''
+        cmd = r'''systemctl is-active docker'''
         isDockerActive = self.execute_commands(cmd)
         # if strstrip(isDockerActive[0])=="active":
         if isinstance(isDockerActive, list):
-            cmd = r'''dockerPid=$(sudo ps aux |grep /bin/dockerd|grep -v grep |awk '{print $2}');sudo cat /proc/$dockerPid/limits |grep files |awk '{print $(NF-1)}';sudo ls -lR  /proc/$dockerPid/fd |grep '^l'|wc -l'''
+            cmd = r'''dockerPid=$(ps aux |grep /bin/dockerd|grep -v grep |awk '{print $2}');cat /proc/$dockerPid/limits |grep files |awk '{print $(NF-1)}';sudo ls -lR  /proc/$dockerPid/fd |grep '^l'|wc -l'''
             dockerFD = self.execute_commands(cmd)
             maxDockerFD = strstrip(dockerFD[0])
             usedDockerFD = strstrip(dockerFD[1])
@@ -70,7 +70,7 @@ class nodecheck(RemoteClientCompass):
         }
         """
         nodeLoad = defaultdict(dict)
-        cmd = r'''cpuCount=$(sudo lscpu |grep 'CPU(s):'|grep -v -i numa|awk '{print $NF}');maxCpuLoad=$(($cpuCount*2));loadAverage=$(sudo uptime |awk -F ':' '{print  $NF}');sudo echo $loadAverage|awk  -F',| +' -v load=$maxCpuLoad '{if($1<load && $2<load && $3<load){print "OK"}else{print "highLoad"}}';sudo echo $loadAverage  '''
+        cmd = r'''cpuCount=$(lscpu |grep 'CPU(s):'|grep -v -i numa|awk '{print $NF}');maxCpuLoad=$(($cpuCount*2));loadAverage=$(uptime |awk -F ':' '{print  $NF}');echo $loadAverage|awk  -F',| +' -v load=$maxCpuLoad '{if($1<load && $2<load && $3<load){print "OK"}else{print "highLoad"}}';echo $loadAverage  '''
         load = self.execute_commands(cmd)
         if strstrip(load[0]) == "OK":
             nodeLoad["nodeload"]["check_result"] = True
@@ -91,7 +91,7 @@ class nodecheck(RemoteClientCompass):
         }
         """
         contrack = defaultdict(dict)
-        cmd = r'''sudo cat /proc/sys/net/nf_conntrack_max;sudo cat /proc/sys/net/netfilter/nf_conntrack_count'''
+        cmd = r'''cat /proc/sys/net/nf_conntrack_max;cat /proc/sys/net/netfilter/nf_conntrack_count'''
         response = self.execute_commands(cmd)
         contrack["contrack"]["contrack_max"] = strstrip(response[0])
         contrack["contrack"]["contrack_used"] = strstrip(response[1])
@@ -110,7 +110,7 @@ class nodecheck(RemoteClientCompass):
         }
         """
         openfile = defaultdict(dict)
-        cmd = r'''sudo cat /proc/sys/fs/file-nr'''
+        cmd = r'''cat /proc/sys/fs/file-nr'''
         response = self.execute_commands(cmd)
         a = strstrip(response[0]).split()[2]
         b = strstrip(response[0]).split()[0]
@@ -131,7 +131,7 @@ class nodecheck(RemoteClientCompass):
         }
         """
         pid = defaultdict(dict)
-        cmd = r'''sudo ls -ld  /proc/[0-9]* |wc -l;sudo cat /proc/sys/kernel/pid_max'''
+        cmd = r'''ls -ld  /proc/[0-9]* |wc -l;cat /proc/sys/kernel/pid_max'''
         response = self.execute_commands(cmd)
         pid["pid"]["pid_max"] = strstrip(response[1])
         pid["pid"]["pid_used"] = strstrip(response[0])
@@ -160,7 +160,7 @@ c
         for i in dnslist:
             d = {}
             d["dnsname"] = i
-            cmd = "sudo which host ||sudo yum -y -q  install  bind-utils;sudo host {}".format(i)
+            cmd = "which host ||sudo yum -y -q  install  bind-utils;host {}".format(i)
             r = self.execute_commands(cmd)
             if isinstance(r, list):
                 d["checkpass"] = True
@@ -195,7 +195,7 @@ c
         }
         """
         diskio = defaultdict(list)
-        cmd = r'''sudo iostat -x 2  5'''
+        cmd = r'''iostat -x 2  5'''
         response = self.execute_commands(cmd)
         d = defaultdict(list)
         for i in response:
@@ -258,7 +258,7 @@ c
         }
         """
         diskusage = defaultdict(list)
-        cmd = r'''sudo df -h|grep -v -E "token|secret|overlay2|containers|tmpfs|kubernetes.io|Filesystem" '''
+        cmd = r'''df -h|grep -v -E "token|secret|overlay2|containers|tmpfs|kubernetes.io|Filesystem" '''
         response = self.execute_commands(cmd)
         for i in response:
             d = {}
@@ -298,9 +298,9 @@ c
         """
 
         nicresult = defaultdict(list)
-        cmd = r'''sudo ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*"|sort -u'''
+        cmd = r'''ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*"|sort -u'''
         niclist = self.execute_commands(cmd)
-        cmd1 = r'''sudo sar -n DEV 1 8'''
+        cmd1 = r'''sar -n DEV 1 8'''
         nicstatus = self.execute_commands(cmd1)
         for j in niclist:
             d1 = defaultdict(dict)
@@ -338,7 +338,7 @@ c
         }
         """
         zprocess = defaultdict(dict)
-        cmd = r'''sudo ps -A -ostat,ppid,pid,cmd | grep -e '^[Zz]' '''
+        cmd = r'''ps -A -ostat,ppid,pid,cmd | grep -e '^[Zz]' '''
         r = self.execute_commands(cmd)
         if isinstance(r, list):
             zprocess["zprocess"]["checkpass"] = False
@@ -359,10 +359,10 @@ c
 
         """
         ntp = defaultdict(dict)
-        cmd = r'''sudo timedatectl  status|grep synchronized|awk -F':| +' '{print $NF}' '''
+        cmd = r'''timedatectl  status|grep synchronized|awk -F':| +' '{print $NF}' '''
         r = self.execute_commands(cmd)
         if strstrip(r[0]) == "yes":
-            cmd = r'''sudo chronyc  sources|grep -E "^\^\*" |cut  -d[ -f 1|awk '{print $NF}' '''
+            cmd = r'''chronyc  sources|grep -E "^\^\*" |cut  -d[ -f 1|awk '{print $NF}' '''
             r = self.execute_commands(cmd)
             if r:
                 n = re.findall('\\d+', strstrip(r[0]))[0]
@@ -393,7 +393,7 @@ c
 
     def get_containerd(self):
         containerd = defaultdict(dict)
-        cmd = r'''sudo pgrep -fl containerd|grep -Ev "shim|dockerd|bash"  '''
+        cmd = r'''pgrep -fl containerd|grep -Ev "shim|dockerd|bash"  '''
         r = self.execute_commands(cmd)
         if isinstance(r, list):
             containerd["containerd"]["checkpass"] = True
@@ -411,10 +411,10 @@ c
         }
         """
         kubelet = defaultdict(dict)
-        cmd = r'''sudo systemctl  is-active kubelet '''
+        cmd = r'''systemctl  is-active kubelet '''
         r = self.execute_commands(cmd)
         if isinstance(r, list):
-            cmd = r'''sudo curl --connect-timeout 5 -sk  127.0.0.1:10248/healthz'''
+            cmd = r'''curl --connect-timeout 5 -sk  127.0.0.1:10248/healthz'''
             r1 = self.execute_commands(cmd)
             if isinstance(r1, list) and strstrip(r1[0]) == "ok":
                 kubelet["kubelet"]["process"] = "active"
@@ -430,7 +430,7 @@ c
 
     def get_kubeproxy(self):
         kubeproxy = defaultdict(dict)
-        cmd = r'''sudo curl --connect-timeout 5 -sk 127.0.0.1:10249/healthz'''
+        cmd = r'''curl --connect-timeout 5 -sk 127.0.0.1:10249/healthz'''
         r = self.execute_commands(cmd)
         if isinstance(r, list) and strstrip(r[0]) == "ok":
             kubeproxy["kubeproxy"]["porthealth"] = True
