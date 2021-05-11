@@ -115,19 +115,29 @@ class RemoteClientCompass(object):
     @logger.catch
     def cmd(self, commands):
         self.connect()
-        commands = "sudo " + commands if self.user != 'root' else commands
         ssh = paramiko.SSHClient()
         ssh._transport = self.__transport
         stdin, stdout, stderr = ssh.exec_command(commands, get_pty=True)
-        if self.user != 'root':
+        if self.user != 'root' and 'sudo' in commands:
             stdin.write(f'{self.pwd}\n')
             stdin.flush()
         status = stdout.channel.recv_exit_status()
         if status == 0:
-            response = stdout.readlines() if self.user == 'root' else stdout.readlines()[2:]
+            response = stdout.readlines()
+            if self.user != 'root' and 'sudo' in commands:
+                ret_data = []
+                for i in range(len(response)):
+                    if response[i].startswith(self.pwd):
+                        continue
+                    elif response[i].startswith("[sudo]") and self.user in response[i]:
+                        continue
+                    else:
+                        ret_data.append(response[i])
+            else:
+                ret_data = response
             for line in response:
                 logger.debug(f'INPUT: {commands} | OUTPUT: {line}')
-            return response
+            return ret_data
         else:
             error_msg = stderr.read().decode()
             logger.error("command {} failed  | {}".format(commands, error_msg))
