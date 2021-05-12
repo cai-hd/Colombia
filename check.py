@@ -440,8 +440,8 @@ class CheckK8s(Cluster):
         self.checkout[self.cluster_name]['partitions_quota'] = data
 
     def pod_exec(self, name, ns, cmd):
-        resp = stream(self.core_v1_api.connect_get_namespaced_pod_exec, name, ns,
-                      command=cmd, stderr=True, stdin=True, stdout=True, tty=False)
+        resp = stream(self.core_v1_api.connect_get_namespaced_pod_exec, name, ns, command=cmd, stderr=True, stdin=True,
+                      stdout=True, tty=False, container="busybox")
         return resp
 
     def check_dns(self):
