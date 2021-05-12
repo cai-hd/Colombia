@@ -33,6 +33,8 @@ def check() -> Dict:
             context['now'] = now
         check_out[cluster_name]['context'] = context
     for i in alias.keys():
+        if alias[i] == i:
+            continue
         check_out[alias[i]] = check_out[i]
         del check_out[i]
     dump = pickle.dumps(check_out)

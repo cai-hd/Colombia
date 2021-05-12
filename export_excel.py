@@ -17,7 +17,7 @@ from openpyxl import Workbook, worksheet
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter, column_index_from_string
 
-title_font = Font( bold=True, size=16)
+title_font = Font(bold=True, size=16)
 title_fill = PatternFill(patternType="solid", start_color="87CEEB")
 subtitle_font = Font(bold=True, size=12)
 subtitle_fill = PatternFill(patternType="solid", start_color="E0FFFF")
@@ -26,7 +26,6 @@ error_font = Font(color="FF0000")
 info_font = Font()
 border = Border(left=Side(style="thin", color="000000"), right=Side(style="thin", color="000000"),
                 top=Side(style="thin", color="000000"), bottom=Side(style="thin", color="000000"))
-
 
 
 def set_data(ws: worksheet, start_column: int, start_row: int, title: list, values: list):
@@ -112,7 +111,7 @@ def get_node_dict(key, check_data):
     return node_info
 
 
-def get_pod_dict(key,check_data):
+def get_pod_dict(key, check_data):
     pod_metric = {dict(pod._asdict())['pod']: dict(pod._asdict()) for pod in
                   check_data[key]['context']['metric']['pods']}
     pod_context = {pod['name']: pod for pod in check_data[key]['context']['pod']['result']}
@@ -234,7 +233,7 @@ def format_data_for_k8s(ws: worksheet, cluster: str, check_data):
 
     # node
     start_column, start_row, end_column, end_row = get_dimension(ws)
-    node_dict = get_node_dict(cluster,check_data)
+    node_dict = get_node_dict(cluster, check_data)
     head_column = start_column
     head_row = end_row + 2
     start_row = head_row + 2
@@ -416,6 +415,7 @@ def format_other_data(ws: worksheet, check_data):
     set_data(ws, start_column, start_row, volumes_title, volumes_data)
 
 
+'''
 def main():
     wb = Workbook()
     default_sheet = wb.active
@@ -433,3 +433,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+'''

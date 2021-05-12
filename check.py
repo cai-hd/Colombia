@@ -121,14 +121,13 @@ class CheckGlobal(K8sClusters):
                 for port in ['2379', '2381']:
                     get_member_cmd = f'sudo ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --cacert=/var/lib/etcd/ssl/ca.crt --cert=/var/lib/etcd/ssl/etcd.crt --key=/var/lib/etcd/ssl/etcd.key --endpoints=https://{master_ip}:{port} endpoint health'
                     ret = ssh_obj.cmd(get_member_cmd)
-                    status = ret[0].split()[2].rstrip(":")
+                    status = ret[-1].rstrip("\r\n").split()[2].rstrip(":")
                     if status == "healthy":
-                        took_time = ret[0].split()[8]
+                        took_time = ret[-1].rstrip("\r\n").split()[8]
                         self.checkout[cluster]['etcd_status'][f"{master_ip}:{port}"] = {'data': took_time,
                                                                                         'status': True}
                     else:
                         self.checkout[cluster]['etcd_status'][f"{master_ip}:{port}"] = {'data': ret, 'status': False}
-                        break
                 ssh_obj.close()
 
     def check_volumes_status(self):
@@ -197,7 +196,7 @@ class CheckGlobal(K8sClusters):
         # pwd = config_obj.get('cargo', 'harbor_pwd')
         # load_images_to_cargo(user, pwd, registry, './busybox-1.28.0')
         _busybox_images = f'{registry}/library/busybox:1.28.0'
-        return _busybox_images,version
+        return _busybox_images, version
 
     def check_node_info(self):
         for cluster in self.clusters.keys():
@@ -230,6 +229,7 @@ class CheckGlobal(K8sClusters):
         alias_dict = dict()
         for cluster in self.clusters.keys():
             alias = self.clusters[cluster]['metadata']['annotations'].get('resource.caicloud.io/alias', 'compass-stack')
+            alias = alias.replace('/', '_')
             alias_dict[cluster] = alias
         return alias_dict
 
@@ -243,7 +243,7 @@ class CheckGlobal(K8sClusters):
 
 
 class CheckK8s(Cluster):
-    def __init__(self, kube_conf, checkout,version):
+    def __init__(self, kube_conf, checkout, version):
         super(CheckK8s, self).__init__(kube_conf)
         self.cluster_name = Path(kube_conf).name
         self.checkout = checkout
@@ -286,9 +286,16 @@ class CheckK8s(Cluster):
         logger.info(f"check {self.cluster_name} pods status")
         status_list = list(set(jsonpath.jsonpath(self.pod_list, '$.items[*].status.phase')))
         status_list.append("restart > 20")
-        pod_status = {x['metadata']['name']: {
-            'restart': sum(jsonpath.jsonpath(x, '$.status.container_statuses[*].restart_count')),
-            'phase': ''.join(jsonpath.jsonpath(x, '$.status.phase'))} for x in self.pod_list['items']}
+        pod_status = {}
+        for x in self.pod_list['items']:
+            pod_name = x['metadata']['name']
+            reason = x['status'].get('reason', None)
+            phase = ''.join(jsonpath.jsonpath(x, '$.status.phase'))
+            if reason == "Evicted" or phase == "Pending":
+                restart = 0
+            else:
+                restart = sum(jsonpath.jsonpath(x, '$.status.container_statuses[*].restart_count'))
+            pod_status[pod_name] = {'restart': restart, 'phase': phase}
         pod_checkout = {x: {'data': 0, 'status': True, 'name': []} for x in status_list}
         for pod in pod_status.keys():
             pod_checkout[pod_status[pod]['phase']]['data'] += 1
@@ -437,7 +444,8 @@ class CheckK8s(Cluster):
             if partitions[part]['status']['hard'] is None or not partitions[part]['status']['hard']:
                 ignore_list.append(part)
         for key in set(ignore_list):
-            del partitions[key]
+            if key in partitions.keys():
+                del partitions[key]
         data = self.__get_checkout_for_tenant_and_partitions(partitions)
         self.checkout[self.cluster_name]['partitions_quota'] = data
 
@@ -471,11 +479,11 @@ class CheckK8s(Cluster):
         for pod in self.pod_list['items']:
             node_ip = pod['status']['host_ip']
             pod_ip = pod['status']['pod_ip']
+            if node_ip is None or node_ip == pod_ip:
+                continue
             if node_ip not in node_pod_ip.keys():
                 node_pod_ip[node_ip] = list()
             node_pod_ip[node_ip].append(pod_ip)
-        for node in node_pod_ip.keys():
-            node_pod_ip[node] = set(node_pod_ip[node]) - set(node_pod_ip.keys())
         return node_pod_ip
 
     def check_network(self):

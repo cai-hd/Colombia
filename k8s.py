@@ -125,10 +125,10 @@ class K8sClient(Cluster):
             pod['ns'] = i.metadata.namespace
             pod['status'] = i.status.phase
             if i.status.container_statuses is not None:
-                pod['restart'] = max([x.restart_count for x in i.status.container_statuses])
+                pod['restart'] = sum([x.restart_count for x in i.status.container_statuses])
             else:
-                pod['restart'] = None
-            pod['start_time'] = f'{i.status.start_time:%Y-%m-%d %H:%M:%S }'
+                pod['restart'] = 0
+            pod['start_time'] = f'{i.status.start_time:%Y-%m-%d %H:%M:%S }' if i.status.start_time is not None else "0-0-0 0:0:0"
             pod['ip'] = i.status.pod_ip
             pod['host'] = i.status.host_ip
             result.append(pod)
