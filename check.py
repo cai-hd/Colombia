@@ -24,7 +24,7 @@ from kubernetes.stream import stream
 from clusters import K8sClusters, Cluster
 from utils import RemoteClientCompass, config_obj, parse_resource, ONE_GIBI
 from log import logger
-from nodecollect import nodecheck, AllRun
+from nodecollect import AllRun
 
 
 class CheckGlobal(K8sClusters):
@@ -103,7 +103,7 @@ class CheckGlobal(K8sClusters):
                 status, content = self.get_response(controller_url)
                 self.checkout[cluster]['controller_status'].append(
                     {master_ip: {'data': content, 'status': status}})
-                scheduler_url = f"https://{master_ip}:10259/healthz"
+                scheduler_url = f"http://{master_ip}:10251/healthz"
                 logger.info(f'check scheduler apiserver {master_ip}')
                 status, content = self.get_response(scheduler_url)
                 self.checkout[cluster]['scheduler_status'].append({master_ip: {'data': content, 'status': status}})
@@ -119,7 +119,7 @@ class CheckGlobal(K8sClusters):
                                               self.machines[master_ip]['spec']['auth']['password'],
                                               self.machines[master_ip]['spec']['auth']['key'])
                 for port in ['2379', '2381']:
-                    get_member_cmd = f'ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --cacert=/var/lib/etcd/ssl/ca.crt --cert=/var/lib/etcd/ssl/etcd.crt --key=/var/lib/etcd/ssl/etcd.key --endpoints=https://{master_ip}:{port} endpoint health'
+                    get_member_cmd = f'sudo ETCDCTL_API=3 /usr/local/etcd/bin/etcdctl --cacert=/var/lib/etcd/ssl/ca.crt --cert=/var/lib/etcd/ssl/etcd.crt --key=/var/lib/etcd/ssl/etcd.key --endpoints=https://{master_ip}:{port} endpoint health'
                     ret = ssh_obj.cmd(get_member_cmd)
                     status = ret[0].split()[2].rstrip(":")
                     if status == "healthy":
@@ -133,12 +133,15 @@ class CheckGlobal(K8sClusters):
 
     def check_volumes_status(self):
         logger.info("start compass gluster volumes status")
-        for master_ip in self.clusters['compass-stack']['spec']['masters']:
+        all_ip = self.clusters['compass-stack']['spec']['masters']
+        node_ip = self.clusters['compass-stack']['spec']['nodes']
+        all_ip.extend(node_ip)
+        for master_ip in all_ip:
             ssh_obj = RemoteClientCompass(master_ip, self.machines[master_ip]['spec']['auth']['user'],
                                           int(self.machines[master_ip]['spec']['sshPort']),
                                           self.machines[master_ip]['spec']['auth']['password'],
                                           self.machines[master_ip]['spec']['auth']['key'])
-            volumes_list_cmd = r"gluster volume list"
+            volumes_list_cmd = r"sudo gluster volume list"
             volumes_list = ssh_obj.cmd(volumes_list_cmd)
             if volumes_list:
                 self.checkout['volumes_status']['compass-stack'] = dict()
@@ -146,7 +149,7 @@ class CheckGlobal(K8sClusters):
                     volume = volume.rstrip("\r\n")
                     logger.info(f"check compass gluster volumes {volume} brick")
                     self.checkout['volumes_status']['compass-stack'][volume] = {'data': list(), 'status': True}
-                    volume_status_info_cmd = f"gluster volume status {volume} detail"
+                    volume_status_info_cmd = f"sudo gluster volume status {volume} detail"
                     info = ssh_obj.cmd(volume_status_info_cmd)
                     brick_name = ""
                     for line in info:
@@ -162,10 +165,10 @@ class CheckGlobal(K8sClusters):
         logger.info("start cargo gluster volumes status")
         ssh_obj_cargo = RemoteClientCompass(config_obj.get('cargo', 'node_ip'), config_obj.get('cargo', 'ssh_user'),
                                             int(config_obj.get('cargo', 'ssh_port')),
-                                            config_obj.get('cargo', 'ssh_pwd'), '')
-        container_list = ssh_obj_cargo.cmd(r"docker ps --format '{{.Names}}'")
-        if "gluster-container" in container_list:
-            volumes_list_cmd = r"docker exec gluster-container gluster volume list"
+                                            config_obj.get('cargo', 'ssh_pwd'), config_obj.get('cargo', 'ssh_key'))
+        container_list = ssh_obj_cargo.cmd(r"sudo docker ps --format '{{.Names}}'")
+        if "gluster-container\r\n" in container_list:
+            volumes_list_cmd = r"sudo docker exec gluster-container gluster volume list"
             volumes_list = ssh_obj_cargo.cmd(volumes_list_cmd)
             if volumes_list:
                 self.checkout['volumes_status']['cargo'] = dict()
@@ -173,7 +176,7 @@ class CheckGlobal(K8sClusters):
                     volume = volume.rstrip("\r\n")
                     logger.info(f"check cargo gluster volumes {volume} brick")
                     self.checkout['volumes_status']['cargo'][volume] = {'data': list(), 'status': True}
-                    volume_status_info_cmd = f"docker exec gluster-container gluster volume status {volume} detail"
+                    volume_status_info_cmd = f"sudo docker exec gluster-container gluster volume status {volume} detail"
                     info = ssh_obj_cargo.cmd(volume_status_info_cmd)
                     brick_name = ""
                     for line in info:

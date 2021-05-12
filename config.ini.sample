@@ -14,8 +14,11 @@ internalDomain = kubernetes.default coredns.kube-system.svc.cluster.local
 node_ip = 10.0.1.126
 # cargo ssh用户
 ssh_user = root
-# cargo ssh用户密码
+# cargo ssh用户密码，如果使用的是密码登录，请把ssh_key设置为空（ssh_key =）
 ssh_pwd = Caicloud@2020
+# cargo ssh使用的key，如果使用key登录，请把 ssh_pwd 设置为空（ssh_pwd =）
+# 使用秘钥添加节点的证书放置到 node_ip 的节点的/root/.ssh/authorized_keys，并配置： ssh_key = ssh-global
+ssh_key = ssh-global
 # cargo ssh端口
 ssh_port = 22
 # harbor镜像仓库的登录用户

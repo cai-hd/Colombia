@@ -42,7 +42,7 @@ class nodecheck(RemoteClientCompass):
         isDockerActive = self.execute_commands(cmd)
         # if strstrip(isDockerActive[0])=="active":
         if isinstance(isDockerActive, list):
-            cmd = r'''dockerPid=$(ps aux |grep /bin/dockerd|grep -v grep |awk '{print $2}');cat /proc/$dockerPid/limits |grep files |awk '{print $(NF-1)}';ls -lR  /proc/$dockerPid/fd |grep '^l'|wc -l'''
+            cmd = r'''dockerPid=$(ps aux |grep /bin/dockerd|grep -v grep |awk '{print $2}');cat /proc/$dockerPid/limits |grep files |awk '{print $(NF-1)}';sudo ls -lR  /proc/$dockerPid/fd |grep '^l'|wc -l'''
             dockerFD = self.execute_commands(cmd)
             maxDockerFD = strstrip(dockerFD[0])
             usedDockerFD = strstrip(dockerFD[1])
@@ -153,14 +153,13 @@ class nodecheck(RemoteClientCompass):
               }
            ]
         }
-c
         """
         dnslist = config_obj.get('kubernetes', 'externalDomain').split()
         dns = defaultdict(list)
         for i in dnslist:
             d = {}
             d["dnsname"] = i
-            cmd = "which host || yum -y -q  install  bind-utils;host {}".format(i)
+            cmd = "which host ||sudo yum -y -q  install  bind-utils;host {}".format(i)
             r = self.execute_commands(cmd)
             if isinstance(r, list):
                 d["checkpass"] = True
@@ -263,6 +262,8 @@ c
         for i in response:
             d = {}
             j = strstrip(i).split()
+            if len(j) < 6:
+                continue
             d["Filesystem"] = j[0]
             d["Size"] = j[1]
             d["Used "] = j[2]
@@ -296,7 +297,7 @@ c
         """
 
         nicresult = defaultdict(list)
-        cmd = r'''ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*"|sort -u'''
+        cmd = r'''sudo ip r|grep -v br_bond|grep -E -o "eth[0-9]*|bond[0-9]*|ens[0-9]*|eno[0-9]*"|sort -u'''
         niclist = self.execute_commands(cmd)
         cmd1 = r'''sar -n DEV 1 8'''
         nicstatus = self.execute_commands(cmd1)

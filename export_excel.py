@@ -269,7 +269,10 @@ def format_data_for_k8s(ws: worksheet, cluster: str, check_data):
         for disk in node_dict[ip]['diskio']:
             if not disk['check_result']['isNormal']:
                 disk_io_status = False
-                disk_io_data.append(f"{disk['device']}:{' '.join(disk['check_result']['data'])}")
+                for i in range(len(disk['check_result']['data'])):
+                    disk['check_result']['data'][i] = ' '.join(disk['check_result']['data'][i])
+                disk['check_result']['data'] = '\n'.join(disk['check_result']['data'])
+                disk_io_data.append(f"{disk['device']}:{disk['check_result']['data']}")
         disk_io = (True if disk_io_status else '\n'.join(disk_io_data), disk_io_status)
         network_io_data = []
         network_io_status = True
