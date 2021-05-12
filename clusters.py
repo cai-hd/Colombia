@@ -136,9 +136,15 @@ class Cluster:
         deployments_obj = self.app_v1_api.list_deployment_for_all_namespaces().to_dict()
         return deployments_obj
 
-    def get_coredns(self) -> dict:
+    def get_coredns(self, version: str) -> dict:
+        if version.startswith("v2.8"):
+            name = "kube-dns-v22"
+        elif version.startswith("v2.10"):
+            name = "coredns"
+        else:
+            name = "coredns"
         coredns_obj = self.app_v1_api.read_namespaced_deployment_status(namespace="kube-system",
-                                                                        name='coredns').to_dict()
+                                                                        name=name).to_dict()
         return coredns_obj
 
     def get_svc(self) -> dict:

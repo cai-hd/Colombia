@@ -192,11 +192,12 @@ class CheckGlobal(K8sClusters):
     def load_busybox_image(self):
         logger.info(f"load and push busybox image")
         registry = self.get_cm('platform-info', 'default')['data']['cargo_registry']
+        version = self.get_cm('platform-info', 'default')['data']['platform_release_version']
         # user = config_obj.get('cargo', 'harbor_user')
         # pwd = config_obj.get('cargo', 'harbor_pwd')
         # load_images_to_cargo(user, pwd, registry, './busybox-1.28.0')
         _busybox_images = f'{registry}/library/busybox:1.28.0'
-        return _busybox_images
+        return _busybox_images,version
 
     def check_node_info(self):
         for cluster in self.clusters.keys():
@@ -242,13 +243,14 @@ class CheckGlobal(K8sClusters):
 
 
 class CheckK8s(Cluster):
-    def __init__(self, kube_conf, checkout):
+    def __init__(self, kube_conf, checkout,version):
         super(CheckK8s, self).__init__(kube_conf)
         self.cluster_name = Path(kube_conf).name
         self.checkout = checkout
         self.pod_list = self.get_pods()
         self.svc_list = self.get_svc()
         self.nodes = self.get_node()
+        self.cps_version = version
 
     def check_cidr(self):
         logger.info(f"check {self.cluster_name} cidr")
@@ -303,7 +305,7 @@ class CheckK8s(Cluster):
 
     def check_coredns_status(self):
         logger.info(f"check {self.cluster_name} coredns")
-        coredns_deploy = self.get_coredns()
+        coredns_deploy = self.get_coredns(self.cps_version)
         if coredns_deploy['status']['available_replicas'] == coredns_deploy['status']['ready_replicas'] == \
                 coredns_deploy['status']['replicas']:
             status = True
@@ -440,8 +442,8 @@ class CheckK8s(Cluster):
         self.checkout[self.cluster_name]['partitions_quota'] = data
 
     def pod_exec(self, name, ns, cmd):
-        resp = stream(self.core_v1_api.connect_get_namespaced_pod_exec, name, ns,
-                      command=cmd, stderr=True, stdin=True, stdout=True, tty=False)
+        resp = stream(self.core_v1_api.connect_get_namespaced_pod_exec, name, ns, command=cmd, stderr=True, stdin=True,
+                      stdout=True, tty=False, container="busybox")
         return resp
 
     def check_dns(self):

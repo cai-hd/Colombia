@@ -14,13 +14,13 @@ def check() -> Dict:
     start = time.time()
     control_k8s = CheckGlobal()
     alias = control_k8s.get_name_alias()
-    busybox_images = control_k8s.load_busybox_image()
+    busybox_images, cps_version = control_k8s.load_busybox_image()
     control_k8s.start_check()
     check_out = control_k8s.checkout
     k8s_conf_list = control_k8s.k8s_conf_list
     for conf in k8s_conf_list:
         cluster_name = Path(conf).name
-        k8s_obj = CheckK8s(conf, check_out)
+        k8s_obj = CheckK8s(conf, check_out, cps_version)
         if k8s_obj.create_check_pod(busybox_images):
             k8s_obj.start_check()
         k8s_obj.del_check_pod()
@@ -45,4 +45,3 @@ def check() -> Dict:
     end = time.time() - start
     logger.info("this task took {} seconds".format(round(end, 2)))
     return True
-
