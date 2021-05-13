@@ -163,7 +163,8 @@ def merge_node(dump, cid):
             if i['Hostname'] == m.node:
                 i['cpu_usage'] = m.cpu
                 i['mem_usage'] = m.memory
-        node_info[i['InternalIP']].update(i)
+        if i['InternalIP'] in node_info.keys():
+            node_info[i['InternalIP']].update(i)
     return node_info
 
 
